@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json(
         { success: true, count: agents.length, data: agents },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+        { headers: { "Cache-Control": "no-store" } }
       );
     } else {
       // Use fallback memory store
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json(
         { success: true, count: filtered.length, data: filtered },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+        { headers: { "Cache-Control": "no-store" } }
       );
     }
   } catch (error: any) {

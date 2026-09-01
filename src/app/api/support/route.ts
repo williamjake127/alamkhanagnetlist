@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       const supports = await CustomerSupport.find(query).sort({ createdAt: -1 });
       return NextResponse.json(
         { success: true, count: supports.length, data: supports },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+        { headers: { "Cache-Control": "no-store" } }
       );
     } else {
       let filtered = [...memoryStore.supports];
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       }
       return NextResponse.json(
         { success: true, count: filtered.length, data: filtered },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+        { headers: { "Cache-Control": "no-store" } }
       );
     }
   } catch (error: any) {

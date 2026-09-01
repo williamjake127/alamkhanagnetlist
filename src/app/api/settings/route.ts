@@ -25,12 +25,12 @@ export async function GET() {
       }
       return NextResponse.json(
         { success: true, data: settings },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+        { headers: { "Cache-Control": "no-store" } }
       );
     } else {
       return NextResponse.json(
         { success: true, data: memoryStore.settings },
-        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+        { headers: { "Cache-Control": "no-store" } }
       );
     }
   } catch (error: any) {
