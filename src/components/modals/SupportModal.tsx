@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import { CloseIcon, WhatsAppIcon } from "../ui/Icons";
+import React from "react";
+import { CloseIcon, WhatsAppIcon, HeadsetIcon } from "../ui/Icons";
+import { useSiteData } from "@/lib/site-context";
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -10,41 +10,8 @@ interface SupportModalProps {
 }
 
 export function SupportModal({ isOpen, onClose }: SupportModalProps) {
-  const [supportList, setSupportList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-      fetch("/api/support?status=active")
-        .then((res) => res.json())
-        .then((json) => {
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            setSupportList(json.data);
-          } else {
-            // Default fallback
-            setSupportList([
-              {
-                name: "Customer Helpline 1",
-                phone: "+96878531374",
-                whatsappLink: "https://wa.me/+96878531374",
-                hours: "24/7 Service",
-              },
-              {
-                name: "Customer Helpline 2",
-                phone: "+96878486803",
-                whatsappLink: "https://wa.me/+96878486803",
-                hours: "24/7 Service",
-              },
-            ]);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load support numbers:", err);
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [isOpen]);
+  const { getSupportContacts } = useSiteData();
+  const supportList = getSupportContacts();
 
   if (!isOpen) return null;
 
@@ -63,14 +30,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
 
         {/* Modal Header */}
         <div className="flex items-center gap-2.5 mb-4 pb-2 border-b border-white/10">
-          <div className="relative w-6 h-6 flex-shrink-0">
-            <Image
-              src="/icons/headset.svg"
-              alt="Support"
-              fill
-              className="object-contain"
-            />
-          </div>
+          <HeadsetIcon className="w-5 h-5 text-primary flex-shrink-0" />
           <h3 className="text-primary font-hind text-lg font-medium">
             ২৪/৭ কাস্টমার সাপোর্ট
           </h3>
@@ -80,13 +40,9 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
           যেকোনো সমস্যা বা অভিযোগের জন্য আমাদের অফিসিয়াল সাপোর্ট হোয়াটসঅ্যাপে যোগাযোগ করুন।
         </p>
 
-        {loading ? (
-          <div className="py-6 text-center text-primary text-xs font-hind">
-            Loading helplines...
-          </div>
-        ) : (
-          <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-            {supportList.map((contact, idx) => (
+        <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+          {supportList && supportList.length > 0 ? (
+            supportList.map((contact, idx) => (
               <div
                 key={contact._id || idx}
                 className="flex items-center justify-between p-3 rounded-[8px] bg-deep_black border border-white/5 hover:border-primary/20 transition-colors"
@@ -111,9 +67,15 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                   <span>WhatsApp</span>
                 </a>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          ) : (
+            <div className="py-8 text-center bg-deep_black/50 rounded-[8px] border border-dashed border-white/10">
+              <p className="text-gray text-xs md:text-sm font-hind">
+                বর্তমানে কোনো হেল্পলাইন যুক্ত নেই।
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

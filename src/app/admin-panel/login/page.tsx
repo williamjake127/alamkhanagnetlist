@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Lock, Mail, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
@@ -12,7 +11,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const { user, login, isDemoMode } = useAuth();
+  const { user, login } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -36,24 +35,13 @@ export default function AdminLoginPage() {
     }
   };
 
-  const handleDemoFill = () => {
-    setEmail("admin@betbuzz365.com");
-    setPassword("admin123");
-  };
-
   return (
     <div className="min-h-screen bg-[#090d12] flex items-center justify-center p-4 selection:bg-primary selection:text-black">
       <div className="w-full max-w-md bg-[#12161d] p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-6 animate-scale-up font-hind">
-        {/* Header with Logo */}
+        {/* Header */}
         <div className="text-center space-y-2">
-          <div className="relative w-44 h-12 mx-auto">
-            <Image
-              src="/images/logo.png"
-              alt="Betbuzz365 Logo"
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-amber-400 text-deep_black font-extrabold text-xl flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
+            <ShieldCheck className="w-6 h-6" />
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">Admin Portal</h2>
           <p className="text-xs text-gray">
@@ -81,7 +69,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@betbuzz365.com"
+                placeholder="Enter your email"
                 required
                 className="w-full py-2.5 pl-10 pr-3 rounded-xl bg-[#090d12] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm font-sans"
               />
@@ -114,18 +102,6 @@ export default function AdminLoginPage() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        {/* Quick Demo Login */}
-        <div className="pt-4 border-t border-white/10 text-center space-y-2">
-          <button
-            type="button"
-            onClick={handleDemoFill}
-            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Autofill Admin Credentials</span>
-          </button>
-        </div>
       </div>
     </div>
   );

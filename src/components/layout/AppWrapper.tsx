@@ -11,6 +11,7 @@ import { SupportModal } from "../modals/SupportModal";
 import { SwapModal } from "../modals/SwapModal";
 import { Agent } from "@/lib/types";
 import { INITIAL_AGENTS } from "@/lib/data/agents";
+import { useSiteData } from "@/lib/site-context";
 
 interface ModalContextType {
   openSearch: () => void;
@@ -31,6 +32,7 @@ const ModalContext = createContext<ModalContextType>({
 export const useModals = () => useContext(ModalContext);
 
 export function AppWrapper({ children }: { children: React.ReactNode }) {
+  const { agents } = useSiteData();
   const [searchOpen, setSearchOpen] = useState(false);
   const [viewAgent, setViewAgent] = useState<Agent | null>(null);
   const [reportAgent, setReportAgent] = useState<Agent | null>(null);
@@ -66,12 +68,13 @@ export function AppWrapper({ children }: { children: React.ReactNode }) {
         <SearchModal
           isOpen={searchOpen}
           onClose={() => setSearchOpen(false)}
-          allAgents={INITIAL_AGENTS}
+          allAgents={agents}
           onSelectAgent={(agent) => {
             setSearchOpen(false);
             setViewAgent(agent);
           }}
         />
+
 
         <ViewAgentModal
           agent={viewAgent}

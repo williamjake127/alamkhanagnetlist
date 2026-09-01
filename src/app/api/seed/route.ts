@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Agent from "@/models/Agent";
-import CustomerSupport from "@/models/CustomerSupport";
 import WebsiteSettings from "@/models/WebsiteSettings";
 import { INITIAL_AGENTS } from "@/lib/data/agents";
 
@@ -13,31 +12,12 @@ export async function POST() {
     const settingsCount = await WebsiteSettings.countDocuments();
     if (settingsCount === 0) {
       await WebsiteSettings.create({
-        facebookGroupLink: "https://facebook.com",
-        siteNotice: "Welcome to Betbuzz365 Official Agent Directory",
+        facebookGroupLink: "",
+        siteNotice: "",
       });
     }
 
-    // 2. Seed Customer Support if none exists
-    const supportCount = await CustomerSupport.countDocuments();
-    if (supportCount === 0) {
-      await CustomerSupport.create([
-        {
-          name: "Customer Helpline 1",
-          phone: "+96878531374",
-          whatsappLink: "https://wa.me/+96878531374",
-          hours: "24/7 Service",
-          status: "active",
-        },
-        {
-          name: "Customer Helpline 2",
-          phone: "+96878486803",
-          whatsappLink: "https://wa.me/+96878486803",
-          hours: "24/7 Service",
-          status: "active",
-        },
-      ]);
-    }
+    // 2. Customer Support: no default seed data — admin adds their own helplines
 
     // 3. Seed Agents if none exists
     const agentCount = await Agent.countDocuments();

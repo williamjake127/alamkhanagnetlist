@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Shield,
@@ -15,99 +15,48 @@ import {
   RefreshCw,
   PhoneCall,
   Star,
-  CheckCircle2,
-  XCircle,
 } from "lucide-react";
 import { AgentFormModal } from "@/components/admin/AgentFormModal";
 import { ClearDbModal } from "@/components/admin/ClearDbModal";
+import { useSiteData } from "@/lib/site-context";
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({
-    admin: 0,
-    sub_admin: 0,
-    super: 0,
-    master: 0,
-    support: 0,
-  });
-  const [recentAgents, setRecentAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { agents, supportList, refreshData, toggleAgentStatus, deleteAgent } = useSiteData();
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [agentToEdit, setAgentToEdit] = useState<any | null>(null);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // 1. Fetch all agents
-      const agentRes = await fetch("/api/agents?status=all");
-      const agentJson = await agentRes.json();
-
-      if (agentJson.success && Array.isArray(agentJson.data)) {
-        const all = agentJson.data;
-        setRecentAgents(all.slice(0, 8));
-
-        setStats({
-          admin: all.filter((a: any) => a.type === "admin").length,
-          sub_admin: all.filter((a: any) => a.type === "sub_admin").length,
-          super: all.filter((a: any) => a.type === "super").length,
-          master: all.filter((a: any) => a.type === "master").length,
-          support: 0,
-        });
-      } else {
-        setRecentAgents([]);
-        setStats({ admin: 0, sub_admin: 0, super: 0, master: 0, support: 0 });
-      }
-
-      // 2. Fetch support count
-      const supportRes = await fetch("/api/support?status=all");
-      const supportJson = await supportRes.json();
-      if (supportJson.success && Array.isArray(supportJson.data)) {
-        setStats((prev) => ({ ...prev, support: supportJson.data.length }));
-      }
-    } catch (err) {
-      console.error("Dashboard data load error:", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshData();
+    setIsRefreshing(false);
   };
 
-  useEffect(() => {
-    fetchData();
-
-    // Listen to global add events
-    const handleUpdate = () => fetchData();
-    window.addEventListener("agents-updated", handleUpdate);
-    return () => window.removeEventListener("agents-updated", handleUpdate);
-  }, []);
-
   const handleToggleStatus = async (agent: any) => {
-    const newStatus = agent.status === "active" ? "inactive" : "active";
-    try {
-      const res = await fetch(`/api/agents/${agent._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) fetchData();
-    } catch (err) {
-      console.error("Toggle error:", err);
-    }
+    const aid = agent._id || agent.id || agent.agentId;
+    await toggleAgentStatus(aid);
   };
 
   const handleDelete = async (agent: any) => {
     if (!confirm(`Delete agent "${agent.name}" (ID: ${agent.agentId || agent.id})?`)) return;
-    try {
-      const res = await fetch(`/api/agents/${agent._id}`, { method: "DELETE" });
-      if (res.ok) fetchData();
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
+    const aid = agent._id || agent.id || agent.agentId;
+    await deleteAgent(aid);
   };
 
+  const stats = {
+    admin: agents.filter((a: any) => a.type === "admin" || a.category === "admin").length,
+    sub_admin: agents.filter((a: any) => a.type === "sub_admin" || a.category === "sub_admin").length,
+    super: agents.filter((a: any) => a.type === "super" || a.category === "super").length,
+    master: agents.filter((a: any) => a.type === "master" || a.category === "master").length,
+    support: supportList.length,
+  };
+
+  const recentAgents = agents.slice(0, 8);
   const totalAgents = stats.admin + stats.sub_admin + stats.super + stats.master;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* 1. Header Banner & Quick Actions */}
       <div className="bg-gradient-to-r from-[#141a22] to-[#11141a] border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -119,8 +68,8 @@ export default function AdminDashboardPage() {
             <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
               Betbuzz365 Agent Directory
             </h2>
-            <p className="text-xs sm:text-sm text-gray mt-1 max-w-xl">
-              Simple, 1-click management of agents, hierarchy roles, contact links, and customer support.
+            <p className="text-xs sm:text-sm text-gray mt-1 max-w-xl font-hind">
+              এজেন্ট পরিচালনা, ক্যাটাগরি রোল, কন্টাক্ট লিঙ্ক এবং কাস্টমার সাপোর্ট ইন্সট্যান্ট পরিবর্তন করুন।
             </p>
           </div>
 
@@ -138,11 +87,11 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
-              onClick={fetchData}
+              onClick={handleRefresh}
               title="Refresh Data"
               className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray hover:text-white transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-primary" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
             </button>
           </div>
         </div>
@@ -285,7 +234,7 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
-      {/* 4. Recent Agents - 100% Responsive (Cards on Mobile, Table on Desktop) */}
+      {/* 4. Recent Agents Table */}
       <div className="bg-[#12161d] border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -305,17 +254,12 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        {loading ? (
-          <div className="py-12 text-center text-primary text-xs sm:text-sm">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-            Loading agents...
-          </div>
-        ) : recentAgents.length === 0 ? (
+        {recentAgents.length === 0 ? (
           <div className="py-12 text-center border border-dashed border-white/10 rounded-xl p-6">
             <Users className="w-10 h-10 text-gray/40 mx-auto mb-2" />
             <p className="text-sm text-white font-bold">No agents in database</p>
             <p className="text-xs text-gray mt-1 max-w-sm mx-auto">
-              Your directory is currently 100% empty. Click below to add your first agent.
+              Your directory is currently empty. Click below to add your first agent.
             </p>
             <button
               onClick={() => {
@@ -330,11 +274,11 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <>
-            {/* Mobile View: Clean, Touch-Friendly Cards (Hidden on md+) */}
+            {/* Mobile View */}
             <div className="grid grid-cols-1 gap-2.5 md:hidden">
-              {recentAgents.map((agent) => (
+              {recentAgents.map((agent: any) => (
                 <div
-                  key={agent._id}
+                  key={agent._id || agent.id}
                   className="p-3 rounded-xl bg-[#090d12] border border-white/5 space-y-2.5"
                 >
                   <div className="flex items-center justify-between">
@@ -353,7 +297,7 @@ export default function AdminDashboardPage() {
                             : "bg-purple-500/20 text-purple-400"
                         }`}
                       >
-                        {agent.type}
+                        {agent.type || agent.category}
                       </span>
                     </div>
 
@@ -421,7 +365,7 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            {/* Desktop View: Clean Table (Hidden on mobile) */}
+            {/* Desktop View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs sm:text-sm font-hind">
                 <thead className="bg-[#090d12] text-gray uppercase text-[11px] font-semibold border-b border-white/5">
@@ -436,8 +380,8 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-gray">
-                  {recentAgents.map((agent) => (
-                    <tr key={agent._id} className="hover:bg-white/[0.02] transition-colors">
+                  {recentAgents.map((agent: any) => (
+                    <tr key={agent._id || agent.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-white">
                         <span className="px-2 py-1 rounded bg-[#090d12] border border-primary/30 text-primary text-xs">
                           {agent.agentId || agent.id}
@@ -451,16 +395,16 @@ export default function AdminDashboardPage() {
                       <td className="py-3 px-3">
                         <span
                           className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                            agent.type === "master"
+                            agent.type === "master" || agent.category === "master"
                               ? "bg-emerald-500/20 text-emerald-400"
-                              : agent.type === "super"
+                              : agent.type === "super" || agent.category === "super"
                               ? "bg-amber-500/20 text-amber-400"
-                              : agent.type === "sub_admin"
+                              : agent.type === "sub_admin" || agent.category === "sub_admin"
                               ? "bg-cyan-500/20 text-cyan-400"
                               : "bg-purple-500/20 text-purple-400"
                           }`}
                         >
-                          {agent.type}
+                          {agent.type || agent.category}
                         </span>
                       </td>
 
@@ -537,14 +481,14 @@ export default function AdminDashboardPage() {
           setAgentToEdit(null);
         }}
         agentToEdit={agentToEdit}
-        onSuccess={fetchData}
+        onSuccess={refreshData}
       />
 
       {/* Clear Database Modal */}
       <ClearDbModal
         isOpen={isClearModalOpen}
         onClose={() => setIsClearModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={refreshData}
       />
     </div>
   );

@@ -1,31 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { AgentTable } from "@/components/agent/AgentTable";
 import { useModals } from "@/components/layout/AppWrapper";
+import { useSiteData } from "@/lib/site-context";
 
 export default function SubAdminPage() {
   const { openView, openReport } = useModals();
-  const [agents, setAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { getAgentsByCategory } = useSiteData();
 
-  useEffect(() => {
-    async function loadSubAdminAgents() {
-      try {
-        const res = await fetch("/api/agents?category=sub_admin&status=active");
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          setAgents(json.data);
-        }
-      } catch (err) {
-        console.error("Failed to load sub admin agents:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadSubAdminAgents();
-  }, []);
+  const agents = getAgentsByCategory("sub_admin", "active");
 
   return (
     <div className="py-2">
@@ -34,7 +18,7 @@ export default function SubAdminPage() {
         agents={agents}
         onView={openView}
         onReport={openReport}
-        emptyMessage={loading ? "সাব এডমিন তালিকা লোড হচ্ছে..." : "বর্তমানে কোন সাব এডমিন তালিকাভুক্ত নেই"}
+        emptyMessage="বর্তমানে কোন সাব এডমিন তালিকাভুক্ত নেই"
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { NoticeMarquee } from "@/components/home/NoticeMarquee";
 import { OfficialGroupBanner } from "@/components/home/OfficialGroupBanner";
 import { QuickAgentCard } from "@/components/home/QuickAgentCard";
 import { SiteLinksCard } from "@/components/home/SiteLinksCard";
@@ -15,8 +16,12 @@ export default function HomePage() {
 
   return (
     <div className="space-y-4">
+      {/* Portal Announcement Notice Marquee */}
+      <NoticeMarquee />
+
       {/* Official Facebook Group Banner */}
-      <OfficialGroupBanner facebookUrl="https://facebook.com" />
+      <OfficialGroupBanner />
+
 
       {/* Quick Agent + Site Links Section */}
       <div className="flex items-center w-full gap-4 md:gap-6 flex-col md:flex-row">

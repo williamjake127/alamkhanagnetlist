@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Check, Star, Users, Zap, Shield, UserCheck } from "lucide-react";
+import { useSiteData } from "@/lib/site-context";
 
 interface AgentFormModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export function AgentFormModal({
   agentToEdit,
   onSuccess,
 }: AgentFormModalProps) {
+  const { agents, addAgent, updateAgent } = useSiteData();
+
   const [formData, setFormData] = useState({
     name: "",
     agentId: "",
@@ -27,7 +30,6 @@ export function AgentFormModal({
     status: "active" as "active" | "inactive",
   });
 
-  const [parentsList, setParentsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,7 +39,7 @@ export function AgentFormModal({
       setFormData({
         name: agentToEdit.name || "",
         agentId: agentToEdit.agentId || agentToEdit.id || "",
-        type: agentToEdit.type || "master",
+        type: agentToEdit.type || agentToEdit.category || "master",
         phone: agentToEdit.phone || "",
         whatsapp: agentToEdit.whatsapp || "",
         rating: agentToEdit.rating || 5,
@@ -62,34 +64,16 @@ export function AgentFormModal({
     setError("");
   }, [agentToEdit, isOpen]);
 
-  // Load possible supervisor/parent candidates when role changes
-  useEffect(() => {
-    async function loadCandidates() {
-      let targetType = "";
-      if (formData.type === "master") targetType = "super";
-      else if (formData.type === "super") targetType = "sub_admin";
-      else if (formData.type === "sub_admin") targetType = "admin";
+  // Supervisors list from cached agents
+  const parentsList = React.useMemo(() => {
+    let targetType = "";
+    if (formData.type === "master") targetType = "super";
+    else if (formData.type === "super") targetType = "sub_admin";
+    else if (formData.type === "sub_admin") targetType = "admin";
 
-      if (!targetType) {
-        setParentsList([]);
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/agents?category=${targetType}&status=active`);
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
-          setParentsList(json.data);
-        }
-      } catch (err) {
-        console.error("Failed to load parent candidates:", err);
-      }
-    }
-
-    if (isOpen) {
-      loadCandidates();
-    }
-  }, [formData.type, isOpen]);
+    if (!targetType) return [];
+    return agents.filter((a: any) => (a.type === targetType || a.category === targetType) && a.status === "active");
+  }, [formData.type, agents]);
 
   // Auto-generate WhatsApp when phone changes if WhatsApp isn't manually customized
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,19 +98,11 @@ export function AgentFormModal({
     }
 
     try {
-      const url = agentToEdit ? `/api/agents/${agentToEdit._id}` : "/api/agents";
-      const method = agentToEdit ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Failed to save agent");
+      if (agentToEdit) {
+        const aid = agentToEdit._id || agentToEdit.id || agentToEdit.agentId;
+        await updateAgent(aid, formData);
+      } else {
+        await addAgent(formData);
       }
 
       onSuccess();
@@ -221,7 +197,7 @@ export function AgentFormModal({
                       setFormData((prev) => ({
                         ...prev,
                         type: r.id as any,
-                        parentId: "", // reset parent on type change
+                        parentId: "",
                       }))
                     }
                     className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
@@ -305,7 +281,7 @@ export function AgentFormModal({
             </div>
           </div>
 
-          {/* 4. Supervisor / Hierarchy (If Master or Super or Sub Admin) */}
+          {/* 4. Supervisor / Hierarchy */}
           {formData.type !== "admin" && (
             <div>
               <label className="block text-gray text-xs font-medium mb-1">
@@ -319,17 +295,12 @@ export function AgentFormModal({
                 className="w-full px-3 py-2.5 rounded-xl bg-[#0e1217] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm"
               >
                 <option value="">-- None / Select Supervisor --</option>
-                {parentsList.map((p) => (
-                  <option key={p._id} value={p._id}>
+                {parentsList.map((p: any) => (
+                  <option key={p._id || p.id} value={p._id || p.id}>
                     {p.name} (ID: {p.agentId || p.id} - {p.phone})
                   </option>
                 ))}
               </select>
-              {parentsList.length === 0 && (
-                <p className="text-[11px] text-gray/60 mt-1">
-                  No higher tier agents found. You can create the higher-tier agent first or assign later.
-                </p>
-              )}
             </div>
           )}
 

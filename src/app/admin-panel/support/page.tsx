@@ -1,55 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Plus, Headphones, Edit3, Trash2, RefreshCw, ExternalLink, PhoneCall } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Headphones, Edit3, Trash2, ExternalLink, PhoneCall } from "lucide-react";
 import { SupportFormModal } from "@/components/admin/SupportFormModal";
+import { useSiteData } from "@/lib/site-context";
 
 export default function CustomerSupportAdminPage() {
-  const [supports, setSupports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { supportList, refreshData, deleteSupport } = useSiteData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [supportToEdit, setSupportToEdit] = useState<any | null>(null);
 
-  const fetchSupports = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/support?status=all");
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setSupports(json.data);
-      } else {
-        setSupports([]);
-      }
-    } catch (err) {
-      console.error("Error fetching support contacts:", err);
-      setSupports([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSupports();
-  }, []);
-
   const handleDelete = async (support: any) => {
     if (!confirm(`Delete helpline "${support.name}"?`)) return;
-
-    try {
-      const res = await fetch(`/api/support/${support._id}`, { method: "DELETE" });
-      const json = await res.json();
-      if (json.success) {
-        fetchSupports();
-      } else {
-        alert("Failed to delete: " + json.error);
-      }
-    } catch (err: any) {
-      alert("Error: " + err.message);
-    }
+    const sid = support._id || support.id;
+    await deleteSupport(sid);
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -74,12 +42,7 @@ export default function CustomerSupportAdminPage() {
       </div>
 
       {/* Grid of Helpline Cards */}
-      {loading ? (
-        <div className="py-16 text-center text-primary text-sm">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-          Loading helplines...
-        </div>
-      ) : supports.length === 0 ? (
+      {supportList.length === 0 ? (
         <div className="py-16 text-center bg-[#12161d] border border-white/10 rounded-2xl p-6">
           <Headphones className="w-12 h-12 text-gray/40 mx-auto mb-3" />
           <h4 className="text-base font-bold text-white">No support helplines added</h4>
@@ -99,9 +62,9 @@ export default function CustomerSupportAdminPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {supports.map((s) => (
+          {supportList.map((s: any) => (
             <div
-              key={s._id}
+              key={s._id || s.id}
               className="bg-[#12161d] border border-white/10 hover:border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-md transition-all flex flex-col justify-between"
             >
               <div>
@@ -177,7 +140,7 @@ export default function CustomerSupportAdminPage() {
           setSupportToEdit(null);
         }}
         supportToEdit={supportToEdit}
-        onSuccess={fetchSupports}
+        onSuccess={refreshData}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Image from "next/image";
 import { Agent } from "@/lib/types";
+import { useSiteData } from "@/lib/site-context";
 
 interface QuickAgentCardProps {
   initialAgent?: Agent;
@@ -10,40 +11,9 @@ interface QuickAgentCardProps {
 }
 
 export function QuickAgentCard({ onReport }: QuickAgentCardProps) {
-  const [agent, setAgent] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadRandomMasterAgent() {
-      try {
-        const res = await fetch("/api/agents?category=master&status=active");
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          const masters = json.data;
-          const randomIndex = Math.floor(Math.random() * masters.length);
-          setAgent(masters[randomIndex]);
-        } else {
-          setAgent(null);
-        }
-      } catch (err) {
-        console.error("Failed to load quick master agent:", err);
-        setAgent(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadRandomMasterAgent();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="bg-light_black md:h-[250px] w-full md:w-[50%] px-2 md:px-10 py-2 md:py-6 rounded-[8px] flex flex-col justify-between animate-pulse">
-        <div className="h-5 bg-deep_black rounded w-48 mx-auto" />
-        <div className="h-28 bg-deep_black rounded my-auto" />
-      </div>
-    );
-  }
+  const { getAgentsByCategory } = useSiteData();
+  const masters = getAgentsByCategory("master", "active");
+  const agent = masters.length > 0 ? masters[0] : null;
 
   if (!agent) {
     return (
@@ -58,7 +28,7 @@ export function QuickAgentCard({ onReport }: QuickAgentCardProps) {
     );
   }
 
-  const agentIdDisplay = agent.agentId || agent.id;
+  const agentIdDisplay = (agent as any).agentId || agent.id;
   const whatsappLink =
     agent.whatsapp || `https://wa.me/${agent.phone?.replace(/[^0-9+]/g, "")}`;
 

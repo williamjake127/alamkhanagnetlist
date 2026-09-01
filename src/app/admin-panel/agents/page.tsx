@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -18,82 +18,54 @@ import {
   X,
 } from "lucide-react";
 import { AgentFormModal } from "@/components/admin/AgentFormModal";
+import { useSiteData } from "@/lib/site-context";
 
 export default function ManageAgentsPage() {
-  const [agents, setAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { agents, refreshData, toggleAgentStatus, deleteAgent } = useSiteData();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [agentToEdit, setAgentToEdit] = useState<any | null>(null);
 
-  const fetchAgents = async () => {
-    setLoading(true);
-    try {
-      let url = "/api/agents?status=all";
-      if (activeTab !== "all") {
-        url += `&category=${activeTab}`;
-      }
-      if (searchTerm.trim()) {
-        url += `&search=${encodeURIComponent(searchTerm.trim())}`;
-      }
+  // Instant in-memory search and filter with 0ms delay
+  const filteredAgents = useMemo(() => {
+    return agents.filter((agent: any) => {
+      const type = agent.type || agent.category || "master";
+      const matchesTab = activeTab === "all" || type === activeTab;
 
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setAgents(json.data);
-      } else {
-        setAgents([]);
-      }
-    } catch (err) {
-      console.error("Error fetching agents:", err);
-      setAgents([]);
-    } finally {
-      setLoading(false);
-    }
+      if (!matchesTab) return false;
+
+      if (!searchTerm.trim()) return true;
+
+      const q = searchTerm.toLowerCase().trim();
+      const name = (agent.name || "").toLowerCase();
+      const id = String(agent.agentId || agent.id || "").toLowerCase();
+      const phone = (agent.phone || "").toLowerCase();
+
+      return name.includes(q) || id.includes(q) || phone.includes(q);
+    });
+  }, [agents, activeTab, searchTerm]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshData();
+    setIsRefreshing(false);
   };
 
-  useEffect(() => {
-    fetchAgents();
-  }, [activeTab]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchAgents();
-  };
-
-  const handleToggleStatus = async (agent: any) => {
-    const newStatus = agent.status === "active" ? "inactive" : "active";
-    try {
-      const res = await fetch(`/api/agents/${agent._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) fetchAgents();
-    } catch (err) {
-      console.error("Toggle error:", err);
-    }
+  const handleToggle = async (agent: any) => {
+    const aid = agent._id || agent.id || agent.agentId;
+    await toggleAgentStatus(aid);
   };
 
   const handleDelete = async (agent: any) => {
     if (!confirm(`Are you sure you want to delete Agent "${agent.name}" (ID: ${agent.agentId || agent.id})?`)) {
       return;
     }
-
-    try {
-      const res = await fetch(`/api/agents/${agent._id}`, { method: "DELETE" });
-      const json = await res.json();
-      if (json.success) {
-        fetchAgents();
-      } else {
-        alert("Failed to delete: " + json.error);
-      }
-    } catch (err: any) {
-      alert("Error deleting agent: " + err.message);
-    }
+    const aid = agent._id || agent.id || agent.agentId;
+    await deleteAgent(aid);
   };
 
   const tabs = [
@@ -105,7 +77,7 @@ export default function ManageAgentsPage() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 font-sans">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -181,23 +153,20 @@ export default function ManageAgentsPage() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by Agent Name, ID, or Phone..."
+              placeholder="Search by Agent Name, ID, or Phone (Instant)..."
               className="w-full py-2 pl-9 pr-8 rounded-xl bg-[#090d12] border border-white/10 text-white placeholder-gray text-xs sm:text-sm outline-none focus:border-primary transition-colors"
             />
             {searchTerm && (
               <button
                 type="button"
-                onClick={() => {
-                  setSearchTerm("");
-                  fetchAgents();
-                }}
+                onClick={() => setSearchTerm("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
@@ -206,30 +175,18 @@ export default function ManageAgentsPage() {
           </div>
 
           <button
-            type="submit"
-            className="px-4 py-2 bg-primary/20 border border-primary/40 hover:bg-primary text-primary hover:text-deep_black font-bold text-xs sm:text-sm rounded-xl transition-all"
-          >
-            Search
-          </button>
-
-          <button
             type="button"
-            onClick={fetchAgents}
+            onClick={handleRefresh}
             title="Refresh"
             className="p-2 bg-[#090d12] border border-white/10 text-gray hover:text-white rounded-xl transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-primary" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
           </button>
-        </form>
+        </div>
       </div>
 
       {/* Main Agent List */}
-      {loading ? (
-        <div className="py-16 text-center text-primary text-sm">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-          Loading directory...
-        </div>
-      ) : agents.length === 0 ? (
+      {filteredAgents.length === 0 ? (
         <div className="py-16 text-center bg-[#12161d] border border-white/10 rounded-2xl p-6">
           <Users className="w-12 h-12 text-gray/40 mx-auto mb-3" />
           <h4 className="text-base font-bold text-white">No agents found</h4>
@@ -250,11 +207,11 @@ export default function ManageAgentsPage() {
           </button>
         </div>
       ) : viewMode === "grid" ? (
-        /* 1. Card Grid View (Ideal for Mobile & Visuals) */
+        /* Card Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {agents.map((agent) => (
+          {filteredAgents.map((agent: any) => (
             <div
-              key={agent._id}
+              key={agent._id || agent.id}
               className="bg-[#12161d] border border-white/10 hover:border-white/20 rounded-2xl p-4 space-y-3 shadow-md transition-all flex flex-col justify-between"
             >
               <div>
@@ -266,22 +223,22 @@ export default function ManageAgentsPage() {
                     </span>
                     <span
                       className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                        agent.type === "master"
+                        agent.type === "master" || agent.category === "master"
                           ? "bg-emerald-500/20 text-emerald-400"
-                          : agent.type === "super"
+                          : agent.type === "super" || agent.category === "super"
                           ? "bg-amber-500/20 text-amber-400"
-                          : agent.type === "sub_admin"
+                          : agent.type === "sub_admin" || agent.category === "sub_admin"
                           ? "bg-cyan-500/20 text-cyan-400"
                           : "bg-purple-500/20 text-purple-400"
                       }`}
                     >
-                      {agent.type}
+                      {agent.type || agent.category}
                     </span>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => handleToggleStatus(agent)}
+                    onClick={() => handleToggle(agent)}
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
                       agent.status === "active"
                         ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
@@ -360,7 +317,7 @@ export default function ManageAgentsPage() {
           ))}
         </div>
       ) : (
-        /* 2. Compact Table View */
+        /* Compact Table View */
         <div className="bg-[#12161d] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm font-hind">
@@ -377,8 +334,8 @@ export default function ManageAgentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-gray">
-                {agents.map((agent) => (
-                  <tr key={agent._id} className="hover:bg-white/[0.02] transition-colors">
+                {filteredAgents.map((agent: any) => (
+                  <tr key={agent._id || agent.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">
                       <span className="px-2 py-1 rounded bg-[#090d12] border border-primary/30 text-primary text-xs">
                         {agent.agentId || agent.id}
@@ -392,16 +349,16 @@ export default function ManageAgentsPage() {
                     <td className="py-3 px-3 whitespace-nowrap">
                       <span
                         className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                          agent.type === "master"
+                          agent.type === "master" || agent.category === "master"
                             ? "bg-emerald-500/20 text-emerald-400"
-                            : agent.type === "super"
+                            : agent.type === "super" || agent.category === "super"
                             ? "bg-amber-500/20 text-amber-400"
-                            : agent.type === "sub_admin"
+                            : agent.type === "sub_admin" || agent.category === "sub_admin"
                             ? "bg-cyan-500/20 text-cyan-400"
                             : "bg-purple-500/20 text-purple-400"
                         }`}
                       >
-                        {agent.type}
+                        {agent.type || agent.category}
                       </span>
                     </td>
 
@@ -440,7 +397,7 @@ export default function ManageAgentsPage() {
                     <td className="py-3 px-3 text-center whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => handleToggleStatus(agent)}
+                        onClick={() => handleToggle(agent)}
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all ${
                           agent.status === "active"
                             ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
@@ -490,7 +447,7 @@ export default function ManageAgentsPage() {
           setAgentToEdit(null);
         }}
         agentToEdit={agentToEdit}
-        onSuccess={fetchAgents}
+        onSuccess={refreshData}
       />
     </div>
   );

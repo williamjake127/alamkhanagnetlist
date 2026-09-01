@@ -136,3 +136,49 @@ export function ChevronRightIcon({ className = "h-7 w-7" }: { className?: string
     </svg>
   );
 }
+
+export function HomeNavIcon({ className = "text-primary text-[14px]" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width="1em"
+      height="1em"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 2.09961L1 12H4V20.0004C4 20.5527 4.44772 21.0004 5 21.0004H10V14.0004H14V21.0004H19C19.5523 21.0004 20 20.5527 20 20.0004V12H23L12 2.09961Z" />
+    </svg>
+  );
+}
+
+export function AgentNavIcon({ className = "text-primary text-[14px]" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width="1em"
+      height="1em"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" />
+    </svg>
+  );
+}
+
+export function HeadsetIcon({ className = "text-primary text-[16px]" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      width="1em"
+      height="1em"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 1C6.48 1 2 5.48 2 11V18C2 19.66 3.34 21 5 21H8V13H4V11C4 6.58 7.58 3 12 3C16.42 3 20 6.58 20 11V13H16V21H19C20.66 21 22 19.66 22 18V11C22 5.48 17.52 1 12 1Z" />
+    </svg>
+  );
+}
+

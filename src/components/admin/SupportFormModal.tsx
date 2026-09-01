@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Check, Headphones } from "lucide-react";
+import { useSiteData } from "@/lib/site-context";
 
 interface SupportFormModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export function SupportFormModal({
   supportToEdit,
   onSuccess,
 }: SupportFormModalProps) {
+  const { addSupport, updateSupport } = useSiteData();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [hours, setHours] = useState("24/7 Service");
@@ -53,27 +56,22 @@ export function SupportFormModal({
     }
 
     try {
-      const url = supportToEdit ? `/api/support/${supportToEdit._id}` : "/api/support";
-      const method = supportToEdit ? "PUT" : "POST";
-
       const cleanPhone = phone.replace(/[^0-9+]/g, "");
       const whatsappLink = `https://wa.me/${cleanPhone.startsWith("+") ? cleanPhone : "+" + cleanPhone}`;
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: phone.trim(),
-          whatsappLink,
-          hours: hours.trim(),
-          status,
-        }),
-      });
+      const payload = {
+        name: name.trim(),
+        phone: phone.trim(),
+        whatsappLink,
+        hours: hours.trim(),
+        status,
+      };
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Failed to save helpline.");
+      if (supportToEdit) {
+        const sid = supportToEdit._id || supportToEdit.id;
+        await updateSupport(sid, payload);
+      } else {
+        await addSupport(payload);
       }
 
       onSuccess();

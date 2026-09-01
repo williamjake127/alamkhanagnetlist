@@ -3,8 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
-import { SearchIcon } from "../ui/Icons";
+import { SearchIcon, HomeNavIcon, AgentNavIcon } from "../ui/Icons";
 
 interface NavbarProps {
   onOpenSearch?: () => void;
@@ -14,11 +13,11 @@ export function Navbar({ onOpenSearch }: NavbarProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { label: "Home", href: "/", icon: "/icons/nav-home.svg" },
-    { label: "Admin", href: "/admin", icon: "/icons/nav-agent.svg" },
-    { label: "Sub Admin", href: "/sub_admin", icon: "/icons/nav-agent.svg" },
-    { label: "Super", href: "/super", icon: "/icons/nav-agent.svg" },
-    { label: "Master", href: "/master", icon: "/icons/nav-agent.svg" },
+    { label: "Home", href: "/", icon: "home" },
+    { label: "Admin", href: "/admin", icon: "agent" },
+    { label: "Sub Admin", href: "/sub_admin", icon: "agent" },
+    { label: "Super", href: "/super", icon: "agent" },
+    { label: "Master", href: "/master", icon: "agent" },
   ];
 
   return (
@@ -39,26 +38,25 @@ export function Navbar({ onOpenSearch }: NavbarProps) {
         </div>
 
         {/* Navigation links center */}
-        <div className="flex items-center col-span-2 justify-center gap-2 md:gap-4 py-1 md:py-2 flex-wrap">
+        <div className="flex items-center col-span-2 justify-center gap-3 md:gap-5 py-1 md:py-2 flex-wrap">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center font-hind -tracking-tight font-medium transition-colors ${
-                  isActive ? "text-primary" : "text-white hover:text-primary"
+                className={`flex items-center gap-1.5 font-hind -tracking-tight font-medium transition-colors ${
+                  isActive ? "text-primary font-semibold" : "text-white hover:text-primary"
                 }`}
               >
-                <span className="relative w-[12px] h-[12px] md:w-[14px] md:h-[14px] mb-1 mr-[3px] md:mr-[5px] inline-block">
-                  <Image
-                    src={item.icon}
-                    alt={item.label}
-                    fill
-                    className={`object-contain ${isActive ? "" : "brightness-100"}`}
-                  />
+                <span className="flex items-center justify-center">
+                  {item.icon === "home" ? (
+                    <HomeNavIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+                  ) : (
+                    <AgentNavIcon className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+                  )}
                 </span>
-                <span className="text-[12px] md:text-[16px]">{item.label}</span>
+                <span className="text-[12px] md:text-[15px]">{item.label}</span>
               </Link>
             );
           })}

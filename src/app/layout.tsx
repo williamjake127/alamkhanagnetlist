@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import { AppWrapper } from "@/components/layout/AppWrapper";
+import { SiteDataProvider } from "@/lib/site-context";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -18,12 +19,9 @@ const hindSiliguri = Hind_Siliguri({
 });
 
 export const metadata: Metadata = {
-  title: "Betbuzz365 Agent List - Official Agent Directory",
+  title: "Official Agent Directory - ভেরিফাইড এজেন্ট তালিকা",
   description:
-    "Official Betbuzz365 Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.",
-  icons: {
-    icon: "/icons/avatar.svg",
-  },
+    "Official Verified Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.",
 };
 
 export default function RootLayout({
@@ -38,8 +36,11 @@ export default function RootLayout({
       className={`${poppins.variable} ${hindSiliguri.variable}`}
     >
       <body className="bg-black text-white antialiased font-sans">
-        <AppWrapper>{children}</AppWrapper>
+        <SiteDataProvider>
+          <AppWrapper>{children}</AppWrapper>
+        </SiteDataProvider>
       </body>
     </html>
   );
 }
+

@@ -54,16 +54,11 @@ export function AdminSidebar({ isOpen, onClose, onOpenAddModal }: AdminSidebarPr
           {/* Logo & Header */}
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
             <Link href="/admin-panel" className="flex items-center gap-2.5">
-              <div className="relative w-28 h-8">
-                <Image
-                  src="/images/logo.png"
-                  alt="Betbuzz365"
-                  fill
-                  className="object-contain"
-                />
-              </div>
+              <span className="text-sm font-extrabold text-primary tracking-wide">
+                Admin Panel
+              </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30">
-                Admin
+                PRO
               </span>
             </Link>
 

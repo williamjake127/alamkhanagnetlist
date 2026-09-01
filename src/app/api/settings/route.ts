@@ -11,8 +11,16 @@ export async function GET() {
       let settings = await WebsiteSettings.findOne();
       if (!settings) {
         settings = await WebsiteSettings.create({
-          facebookGroupLink: "https://facebook.com",
+          siteName: "",
+          siteLogo: "",
+          siteFavicon: "",
+          metaTitle: "",
+          metaDescription: "",
+          metaKeywords: "",
+          facebookGroupLink: "",
           siteNotice: "",
+          sliderImages: [],
+          proxyLinks: [],
         });
       }
       return NextResponse.json({ success: true, data: settings });
@@ -30,23 +38,46 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { facebookGroupLink, siteNotice } = body;
+    const {
+      siteName,
+      siteLogo,
+      siteFavicon,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      facebookGroupLink,
+      siteNotice,
+      sliderImages,
+      proxyLinks,
+    } = body;
     const mongooseConn = await connectToDatabase();
 
     if (mongooseConn && mongooseConn.connection.readyState === 1) {
       let settings = await WebsiteSettings.findOne();
       if (!settings) {
         settings = new WebsiteSettings({
+          siteName: siteName !== undefined ? siteName.trim() : "",
+          siteLogo: siteLogo !== undefined ? siteLogo.trim() : "",
+          siteFavicon: siteFavicon !== undefined ? siteFavicon.trim() : "",
+          metaTitle: metaTitle !== undefined ? metaTitle.trim() : "",
+          metaDescription: metaDescription !== undefined ? metaDescription.trim() : "",
+          metaKeywords: metaKeywords !== undefined ? metaKeywords.trim() : "",
           facebookGroupLink: facebookGroupLink?.trim() || "https://facebook.com",
-          siteNotice: siteNotice?.trim() || "",
+          siteNotice: siteNotice !== undefined ? siteNotice.trim() : "স্বাগতম আমাদের অফিসিয়াল এজেন্ট তালিকায়।",
+          sliderImages: Array.isArray(sliderImages) ? sliderImages : [],
+          proxyLinks: Array.isArray(proxyLinks) ? proxyLinks : [],
         });
       } else {
-        if (facebookGroupLink !== undefined) {
-          settings.facebookGroupLink = facebookGroupLink.trim();
-        }
-        if (siteNotice !== undefined) {
-          settings.siteNotice = siteNotice.trim();
-        }
+        if (siteName !== undefined) settings.siteName = siteName.trim();
+        if (siteLogo !== undefined) settings.siteLogo = siteLogo.trim();
+        if (siteFavicon !== undefined) settings.siteFavicon = siteFavicon.trim();
+        if (metaTitle !== undefined) settings.metaTitle = metaTitle.trim();
+        if (metaDescription !== undefined) settings.metaDescription = metaDescription.trim();
+        if (metaKeywords !== undefined) settings.metaKeywords = metaKeywords.trim();
+        if (facebookGroupLink !== undefined) settings.facebookGroupLink = facebookGroupLink.trim();
+        if (siteNotice !== undefined) settings.siteNotice = siteNotice.trim();
+        if (sliderImages !== undefined && Array.isArray(sliderImages)) settings.sliderImages = sliderImages;
+        if (proxyLinks !== undefined && Array.isArray(proxyLinks)) settings.proxyLinks = proxyLinks;
       }
       await settings.save();
       return NextResponse.json({
@@ -55,12 +86,17 @@ export async function POST(req: NextRequest) {
         data: settings,
       });
     } else {
-      if (facebookGroupLink !== undefined) {
-        memoryStore.settings.facebookGroupLink = facebookGroupLink.trim();
-      }
-      if (siteNotice !== undefined) {
-        memoryStore.settings.siteNotice = siteNotice.trim();
-      }
+      if (siteName !== undefined) memoryStore.settings.siteName = siteName.trim();
+      if (siteLogo !== undefined) memoryStore.settings.siteLogo = siteLogo.trim();
+      if (siteFavicon !== undefined) memoryStore.settings.siteFavicon = siteFavicon.trim();
+      if (metaTitle !== undefined) memoryStore.settings.metaTitle = metaTitle.trim();
+      if (metaDescription !== undefined) memoryStore.settings.metaDescription = metaDescription.trim();
+      if (metaKeywords !== undefined) memoryStore.settings.metaKeywords = metaKeywords.trim();
+      if (facebookGroupLink !== undefined) memoryStore.settings.facebookGroupLink = facebookGroupLink.trim();
+      if (siteNotice !== undefined) memoryStore.settings.siteNotice = siteNotice.trim();
+      if (sliderImages !== undefined && Array.isArray(sliderImages)) memoryStore.settings.sliderImages = sliderImages;
+      if (proxyLinks !== undefined && Array.isArray(proxyLinks)) memoryStore.settings.proxyLinks = proxyLinks;
+
       memoryStore.settings.updatedAt = new Date();
 
       return NextResponse.json({

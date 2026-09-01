@@ -1,35 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { FacebookIcon } from "../ui/Icons";
+import { useSiteData } from "@/lib/site-context";
 
 interface OfficialGroupBannerProps {
   facebookUrl?: string;
 }
 
-export function OfficialGroupBanner({
-  facebookUrl: initialUrl = "https://facebook.com",
-}: OfficialGroupBannerProps) {
-  const [facebookUrl, setFacebookUrl] = useState(initialUrl);
-
-  useEffect(() => {
-    async function fetchFacebookLink() {
-      try {
-        const res = await fetch("/api/settings");
-        const json = await res.json();
-        if (json.success && json.data?.facebookGroupLink) {
-          setFacebookUrl(json.data.facebookGroupLink);
-        }
-      } catch (err) {
-        console.error("Failed to load official facebook group URL:", err);
-      }
-    }
-
-    fetchFacebookLink();
-  }, []);
+export function OfficialGroupBanner({ facebookUrl: propUrl }: OfficialGroupBannerProps) {
+  const { settings } = useSiteData();
+  const facebookUrl = propUrl || settings.facebookGroupLink || "https://facebook.com";
 
   return (
-    <div className="flex justify-around items-center mt-4 bg-light_black rounded-[8px] py-2 px-3 sm:px-4">
+    <div className="flex justify-around items-center mt-2 bg-light_black rounded-[8px] py-2 px-3 sm:px-4">
       <h1 className="text-primary font-hind text-sm md:text-base font-medium">
         আমাদের অফিসিয়াল ফেসবুক গ্রুপঃ
       </h1>

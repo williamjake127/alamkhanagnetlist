@@ -29,26 +29,49 @@ export interface StoredSupport {
   updatedAt: Date;
 }
 
+export interface StoredProxyLink {
+  id: string;
+  title: string;
+  url: string;
+  status: "active" | "inactive";
+}
+
 export interface StoredSettings {
   _id: string;
+  siteName: string;
+  siteLogo: string;
+  siteFavicon: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
   facebookGroupLink: string;
   siteNotice: string;
+  sliderImages: string[];
+  proxyLinks: StoredProxyLink[];
   updatedAt: Date;
 }
 
-// Global In-Memory Store - starts completely empty
+
+// Global In-Memory Store
 class MemoryStore {
   agents: StoredAgent[] = [];
   supports: StoredSupport[] = [];
   settings: StoredSettings = {
     _id: "settings_1",
-    facebookGroupLink: "https://facebook.com",
-    siteNotice: "Welcome to Betbuzz365 Official Agent Directory",
+    siteName: "",
+    siteLogo: "",
+    siteFavicon: "",
+    metaTitle: "",
+    metaDescription: "",
+    metaKeywords: "",
+    facebookGroupLink: "",
+    siteNotice: "",
+    sliderImages: [],
+    proxyLinks: [],
     updatedAt: new Date(),
   };
 
   constructor() {
-    // Starts 100% clean and empty
     this.agents = [];
     this.supports = [];
   }
@@ -58,8 +81,16 @@ class MemoryStore {
     this.supports = [];
     this.settings = {
       _id: "settings_1",
-      facebookGroupLink: "https://facebook.com",
-      siteNotice: "Welcome to Betbuzz365 Official Agent Directory",
+      siteName: "",
+      siteLogo: "",
+      siteFavicon: "",
+      metaTitle: "",
+      metaDescription: "",
+      metaKeywords: "",
+      facebookGroupLink: "",
+      siteNotice: "",
+      sliderImages: [],
+      proxyLinks: [],
       updatedAt: new Date(),
     };
   }
