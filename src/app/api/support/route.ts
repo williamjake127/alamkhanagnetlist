@@ -19,7 +19,10 @@ export async function GET(req: NextRequest) {
       }
 
       const supports = await CustomerSupport.find(query).sort({ createdAt: -1 });
-      return NextResponse.json({ success: true, count: supports.length, data: supports });
+      return NextResponse.json(
+        { success: true, count: supports.length, data: supports },
+        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+      );
     } else {
       let filtered = [...memoryStore.supports];
       if (status && status !== "all") {
@@ -27,7 +30,10 @@ export async function GET(req: NextRequest) {
       } else if (!status) {
         filtered = filtered.filter((s) => s.status === "active");
       }
-      return NextResponse.json({ success: true, count: filtered.length, data: filtered });
+      return NextResponse.json(
+        { success: true, count: filtered.length, data: filtered },
+        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+      );
     }
   } catch (error: any) {
     return NextResponse.json(

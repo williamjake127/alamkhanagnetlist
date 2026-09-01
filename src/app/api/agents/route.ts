@@ -40,7 +40,10 @@ export async function GET(req: NextRequest) {
         .populate("parentId", "name agentId type phone whatsapp")
         .sort({ createdAt: -1 });
 
-      return NextResponse.json({ success: true, count: agents.length, data: agents });
+      return NextResponse.json(
+        { success: true, count: agents.length, data: agents },
+        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+      );
     } else {
       // Use fallback memory store
       let filtered = [...memoryStore.agents];
@@ -66,7 +69,10 @@ export async function GET(req: NextRequest) {
         );
       }
 
-      return NextResponse.json({ success: true, count: filtered.length, data: filtered });
+      return NextResponse.json(
+        { success: true, count: filtered.length, data: filtered },
+        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+      );
     }
   } catch (error: any) {
     console.error("GET /api/agents error:", error);

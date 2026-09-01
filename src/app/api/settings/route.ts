@@ -23,9 +23,15 @@ export async function GET() {
           proxyLinks: [],
         });
       }
-      return NextResponse.json({ success: true, data: settings });
+      return NextResponse.json(
+        { success: true, data: settings },
+        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+      );
     } else {
-      return NextResponse.json({ success: true, data: memoryStore.settings });
+      return NextResponse.json(
+        { success: true, data: memoryStore.settings },
+        { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=3600" } }
+      );
     }
   } catch (error: any) {
     return NextResponse.json(

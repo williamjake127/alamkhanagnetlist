@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { Agent } from "./types";
 import { INITIAL_AGENTS } from "./data/agents";
 
@@ -42,7 +42,7 @@ interface SiteDataContextType {
   isLoading: boolean;
   getAgentsByCategory: (category: string, status?: string) => Agent[];
   getSupportContacts: () => SupportContact[];
-  refreshData: () => Promise<void>;
+  refreshData: (opts?: { force?: boolean }) => Promise<void>;
   updateSettings: (newSettings: Partial<WebsiteSettingsData>) => Promise<boolean>;
   addAgent: (agent: any) => Promise<boolean>;
   updateAgent: (id: string, agent: any) => Promise<boolean>;
@@ -90,28 +90,71 @@ const SiteDataContext = createContext<SiteDataContextType>({
 
 export const useSiteData = () => useContext(SiteDataContext);
 
+// Cache keys
 const CACHE_KEY_AGENTS = "bb365_cached_agents";
 const CACHE_KEY_SETTINGS = "bb365_cached_settings";
 const CACHE_KEY_SUPPORT = "bb365_cached_support";
+// Timestamp keys — store when each cache entry was last written
+const CACHE_KEY_AGENTS_TS = "bb365_cached_agents_ts";
+const CACHE_KEY_SETTINGS_TS = "bb365_cached_settings_ts";
+const CACHE_KEY_SUPPORT_TS = "bb365_cached_support_ts";
+
+// Cache TTL: 60 seconds. After this the background refresh runs.
+const CACHE_TTL_MS = 60_000;
+
+// Module-level flag — persists for the lifetime of the JS session (survives SPA navigations).
+// Prevents redundant network calls when navigating between pages.
+let sessionFetched = false;
+
+function isCacheStale(tsKey: string): boolean {
+  try {
+    const ts = localStorage.getItem(tsKey);
+    if (!ts) return true;
+    return Date.now() - Number(ts) > CACHE_TTL_MS;
+  } catch {
+    return true;
+  }
+}
+
+function hasCachedData(): boolean {
+  try {
+    return (
+      !!localStorage.getItem(CACHE_KEY_AGENTS) &&
+      !!localStorage.getItem(CACHE_KEY_SETTINGS)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   const [settings, setSettings] = useState<WebsiteSettingsData>(DEFAULT_SETTINGS);
   const [supportList, setSupportList] = useState<SupportContact[]>([]);
+  // isLoading is only true on the VERY first cold load (no localStorage cache at all)
   const [isLoading, setIsLoading] = useState(false);
+  const hasCacheRef = useRef(false);
 
-  // Load from local storage cache on client mount
+  // ─── Step 1: Instant hydration from localStorage ───────────────────────────
+  // Runs synchronously on first client mount, before any network call.
   useEffect(() => {
+    let cacheFound = false;
     try {
       const cachedAgents = localStorage.getItem(CACHE_KEY_AGENTS);
       if (cachedAgents) {
         const parsed = JSON.parse(cachedAgents);
-        if (Array.isArray(parsed) && parsed.length > 0) setAgents(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAgents(parsed);
+          cacheFound = true;
+        }
       }
       const cachedSettings = localStorage.getItem(CACHE_KEY_SETTINGS);
       if (cachedSettings) {
         const parsed = JSON.parse(cachedSettings);
-        if (parsed && typeof parsed === "object") setSettings(parsed);
+        if (parsed && typeof parsed === "object") {
+          setSettings(parsed);
+          cacheFound = true;
+        }
       }
       const cachedSupport = localStorage.getItem(CACHE_KEY_SUPPORT);
       if (cachedSupport) {
@@ -119,9 +162,10 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(parsed)) setSupportList(parsed);
       }
     } catch (e) {}
+    hasCacheRef.current = cacheFound;
   }, []);
 
-  // Automatic SEO & Dynamic Head Updater (Title, Description, Keywords, Favicon)
+  // ─── SEO & Dynamic Head Updater ────────────────────────────────────────────
   useEffect(() => {
     if (typeof document === "undefined") return;
 
@@ -146,7 +190,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
 
     document.title = title;
 
-    // Meta description
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
       metaDesc = document.createElement("meta");
@@ -155,7 +198,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
     metaDesc.setAttribute("content", desc);
 
-    // Meta keywords
     let metaKey = document.querySelector('meta[name="keywords"]');
     if (!metaKey) {
       metaKey = document.createElement("meta");
@@ -164,7 +206,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
     metaKey.setAttribute("content", keywords);
 
-    // Dynamic Favicon
     if (settings.siteFavicon && settings.siteFavicon.trim()) {
       let faviconLink = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
       if (!faviconLink) {
@@ -182,8 +223,31 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     settings.siteFavicon,
   ]);
 
-  // Background fetch without blocking UI
-  const refreshData = useCallback(async () => {
+  // ─── Core refresh function ─────────────────────────────────────────────────
+  // Never shows a blocking spinner unless there is zero cached data.
+  const refreshData = useCallback(async (opts?: { force?: boolean }) => {
+    const force = opts?.force ?? false;
+
+    // Skip network call if:
+    //  - We've already fetched in this JS session (SPA navigation), AND
+    //  - The caller didn't explicitly force a refresh.
+    if (sessionFetched && !force) return;
+
+    // Also skip if cache is fresh and no force flag.
+    const agentsStale = isCacheStale(CACHE_KEY_AGENTS_TS);
+    const settingsStale = isCacheStale(CACHE_KEY_SETTINGS_TS);
+    const supportStale = isCacheStale(CACHE_KEY_SUPPORT_TS);
+    const anyStale = agentsStale || settingsStale || supportStale;
+
+    if (!anyStale && !force) {
+      sessionFetched = true;
+      return;
+    }
+
+    // Only show the loading spinner if there is NO cache at all (true cold start)
+    const coldStart = !hasCacheRef.current && !hasCachedData();
+    if (coldStart) setIsLoading(true);
+
     try {
       const [agentRes, settingsRes, supportRes] = await Promise.allSettled([
         fetch("/api/agents?status=all"),
@@ -211,6 +275,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
           setAgents(normalizedAgents);
           try {
             localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(normalizedAgents));
+            localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
           } catch (e) {}
         }
       }
@@ -231,13 +296,15 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
             sliderImages: Array.isArray(settingsData.data.sliderImages)
               ? settingsData.data.sliderImages
               : [],
-            proxyLinks: Array.isArray(settingsData.data.proxyLinks) && settingsData.data.proxyLinks.length > 0
-              ? settingsData.data.proxyLinks
-              : DEFAULT_PROXY_LINKS,
+            proxyLinks:
+              Array.isArray(settingsData.data.proxyLinks) && settingsData.data.proxyLinks.length > 0
+                ? settingsData.data.proxyLinks
+                : DEFAULT_PROXY_LINKS,
           };
           setSettings(s);
           try {
             localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(s));
+            localStorage.setItem(CACHE_KEY_SETTINGS_TS, String(Date.now()));
           } catch (e) {}
         }
       }
@@ -248,20 +315,26 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
           setSupportList(supportData.data);
           try {
             localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(supportData.data));
+            localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
           } catch (e) {}
         }
       }
+
+      sessionFetched = true;
     } catch (err) {
       console.error("Background data refresh error:", err);
+    } finally {
+      if (coldStart) setIsLoading(false);
     }
   }, []);
 
-  // Initial load
+  // ─── Step 2: Background refresh on mount ──────────────────────────────────
+  // Runs after the localStorage hydration above. Never blocks the UI.
   useEffect(() => {
     refreshData();
   }, [refreshData]);
 
-  // Fast categorized retrieval
+  // ─── Categorized retrieval ─────────────────────────────────────────────────
   const getAgentsByCategory = useCallback(
     (category: string, status: string = "active") => {
       return agents.filter((a) => {
@@ -280,12 +353,13 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     return supportList.filter((s) => s.status !== "inactive");
   }, [supportList]);
 
-  // Optimistic Settings Update
+  // ─── Settings (already optimistic) ────────────────────────────────────────
   const updateSettings = async (newSettings: Partial<WebsiteSettingsData>): Promise<boolean> => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
     try {
       localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SETTINGS_TS, String(Date.now()));
     } catch (e) {}
 
     try {
@@ -302,7 +376,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Optimistic Agent Add
+  // ─── Agent mutations (already optimistic) ─────────────────────────────────
   const addAgent = async (agentPayload: any): Promise<boolean> => {
     try {
       const res = await fetch("/api/agents", {
@@ -331,6 +405,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         setAgents(updated);
         try {
           localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
         } catch (e) {}
         return true;
       }
@@ -341,7 +416,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Optimistic Agent Update
   const updateAgent = async (id: string, agentPayload: any): Promise<boolean> => {
     const updated = agents.map((a) => {
       const aid = (a as any)._id || a.id || (a as any).agentId;
@@ -358,6 +432,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     setAgents(updated);
     try {
       localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
     } catch (e) {}
 
     try {
@@ -374,7 +449,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Optimistic Agent Delete
   const deleteAgent = async (id: string): Promise<boolean> => {
     const updated = agents.filter((a) => {
       const aid = (a as any)._id || a.id || (a as any).agentId;
@@ -383,6 +457,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     setAgents(updated);
     try {
       localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
     } catch (e) {}
 
     try {
@@ -395,7 +470,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Optimistic Status Toggle
   const toggleAgentStatus = async (id: string): Promise<boolean> => {
     let targetStatus = "active";
     const updated = agents.map((a) => {
@@ -409,6 +483,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     setAgents(updated);
     try {
       localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
     } catch (e) {}
 
     try {
@@ -425,7 +500,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Support contacts operations
+  // ─── Support mutations (already optimistic) ────────────────────────────────
   const addSupport = async (contactPayload: any): Promise<boolean> => {
     try {
       const res = await fetch("/api/support", {
@@ -439,6 +514,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         setSupportList(updated);
         try {
           localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
         } catch (e) {}
         return true;
       }
@@ -450,10 +526,13 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSupport = async (id: string, contactPayload: any): Promise<boolean> => {
-    const updated = supportList.map((s) => (s._id === id || s.id === id ? { ...s, ...contactPayload } : s));
+    const updated = supportList.map((s) =>
+      s._id === id || s.id === id ? { ...s, ...contactPayload } : s
+    );
     setSupportList(updated);
     try {
       localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
     } catch (e) {}
 
     try {
@@ -475,6 +554,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     setSupportList(updated);
     try {
       localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
     } catch (e) {}
 
     try {
@@ -490,9 +570,14 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const clearAllDatabase = async (): Promise<boolean> => {
     setAgents([]);
     setSupportList([]);
+    sessionFetched = false; // Allow next mount to re-fetch
     try {
       localStorage.removeItem(CACHE_KEY_AGENTS);
+      localStorage.removeItem(CACHE_KEY_SETTINGS);
       localStorage.removeItem(CACHE_KEY_SUPPORT);
+      localStorage.removeItem(CACHE_KEY_AGENTS_TS);
+      localStorage.removeItem(CACHE_KEY_SETTINGS_TS);
+      localStorage.removeItem(CACHE_KEY_SUPPORT_TS);
     } catch (e) {}
 
     try {
