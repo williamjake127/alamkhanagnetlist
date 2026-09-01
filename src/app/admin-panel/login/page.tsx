@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Lock, Mail, AlertCircle, ArrowRight } from "lucide-react";
+import { Lock, Mail, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -42,11 +42,11 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-light_black p-6 sm:p-8 rounded-[12px] border border-white/10 shadow-2xl space-y-6">
+    <div className="min-h-screen bg-[#090d12] flex items-center justify-center p-4 selection:bg-primary selection:text-black">
+      <div className="w-full max-w-md bg-[#12161d] p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-6 animate-scale-up font-hind">
         {/* Header with Logo */}
         <div className="text-center space-y-2">
-          <div className="relative w-48 h-14 mx-auto">
+          <div className="relative w-44 h-12 mx-auto">
             <Image
               src="/images/logo.png"
               alt="Betbuzz365 Logo"
@@ -55,15 +55,15 @@ export default function AdminLoginPage() {
               className="object-contain"
             />
           </div>
-          <h2 className="text-xl font-bold text-white font-hind">Admin Portal Login</h2>
-          <p className="text-xs text-gray font-hind">
-            Sign in to access management dashboard & agent controls
+          <h2 className="text-xl font-bold text-white tracking-tight">Admin Portal</h2>
+          <p className="text-xs text-gray">
+            Sign in to manage agents, helplines, and directory settings
           </p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="p-3 rounded-[8px] bg-error/15 border border-error/30 text-error text-xs font-hind flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -72,35 +72,35 @@ export default function AdminLoginPage() {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-primary text-xs font-hind block mb-1 font-medium">
+            <label className="block text-gray text-xs font-semibold mb-1">
               Admin Email
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-gray absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-gray absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@betbuzz365.com"
                 required
-                className="w-full py-2.5 pl-9 pr-3 rounded-[8px] bg-deep_black outline-none text-white text-sm border border-white/10 focus:border-primary transition-colors font-sans"
+                className="w-full py-2.5 pl-10 pr-3 rounded-xl bg-[#090d12] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm font-sans"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-primary text-xs font-hind block mb-1 font-medium">
+            <label className="block text-gray text-xs font-semibold mb-1">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-gray absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-gray absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full py-2.5 pl-9 pr-3 rounded-[8px] bg-deep_black outline-none text-white text-sm border border-white/10 focus:border-primary transition-colors font-sans"
+                className="w-full py-2.5 pl-10 pr-3 rounded-xl bg-[#090d12] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm font-sans"
               />
             </div>
           </div>
@@ -108,28 +108,24 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-2.5 rounded-[8px] bg-primary text-deep_black font-bold text-sm font-hind hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-amber-400 text-deep_black font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <span>{submitting ? "Signing in..." : "Sign In to Dashboard"}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Development Helper */}
-        {isDemoMode && (
-          <div className="pt-4 border-t border-white/10 text-center space-y-2">
-            <p className="text-[11px] text-gray font-hind">
-              Development Quick Login:
-            </p>
-            <button
-              type="button"
-              onClick={handleDemoFill}
-              className="text-xs text-primary underline font-hind hover:opacity-80"
-            >
-              Fill Demo Admin Credentials
-            </button>
-          </div>
-        )}
+        {/* Quick Demo Login */}
+        <div className="pt-4 border-t border-white/10 text-center space-y-2">
+          <button
+            type="button"
+            onClick={handleDemoFill}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-primary text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Autofill Admin Credentials</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Agent } from "@/lib/types";
-import { INITIAL_AGENTS } from "@/lib/data/agents";
 
 interface QuickAgentCardProps {
   initialAgent?: Agent;
@@ -24,13 +23,11 @@ export function QuickAgentCard({ onReport }: QuickAgentCardProps) {
           const randomIndex = Math.floor(Math.random() * masters.length);
           setAgent(masters[randomIndex]);
         } else {
-          // Fallback to random from initial verified masters
-          const randomIndex = Math.floor(Math.random() * INITIAL_AGENTS.length);
-          setAgent(INITIAL_AGENTS[randomIndex]);
+          setAgent(null);
         }
       } catch (err) {
-        console.error("Failed to load random quick master agent:", err);
-        setAgent(INITIAL_AGENTS[0]);
+        console.error("Failed to load quick master agent:", err);
+        setAgent(null);
       } finally {
         setLoading(false);
       }
@@ -39,7 +36,7 @@ export function QuickAgentCard({ onReport }: QuickAgentCardProps) {
     loadRandomMasterAgent();
   }, []);
 
-  if (!agent) {
+  if (loading) {
     return (
       <div className="bg-light_black md:h-[250px] w-full md:w-[50%] px-2 md:px-10 py-2 md:py-6 rounded-[8px] flex flex-col justify-between animate-pulse">
         <div className="h-5 bg-deep_black rounded w-48 mx-auto" />
@@ -48,7 +45,20 @@ export function QuickAgentCard({ onReport }: QuickAgentCardProps) {
     );
   }
 
-  const agentIdDisplay = agent.agentId || agent.id || "08";
+  if (!agent) {
+    return (
+      <div className="bg-light_black md:h-[250px] w-full md:w-[50%] px-4 md:px-10 py-4 md:py-6 rounded-[8px] flex flex-col justify-center items-center text-center space-y-2">
+        <h1 className="text-primary font-hind font-medium text-[16px]">
+          কুইক মাস্টার এজেন্ট নম্বর
+        </h1>
+        <div className="p-4 bg-deep_black rounded-[8px] w-full text-gray text-xs md:text-sm font-hind">
+          বর্তমানে কোন কুইক এজেন্ট নির্ধারিত নেই। অনুগ্রহ করে সরাসরি এডমিন অথবা হেল্পলাইনে যোগাযোগ করুন।
+        </div>
+      </div>
+    );
+  }
+
+  const agentIdDisplay = agent.agentId || agent.id;
   const whatsappLink =
     agent.whatsapp || `https://wa.me/${agent.phone?.replace(/[^0-9+]/g, "")}`;
 

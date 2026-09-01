@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Save, Facebook, AlertCircle, CheckCircle } from "lucide-react";
+import { Check, Facebook, AlertCircle, CheckCircle2, Globe, ExternalLink } from "lucide-react";
 
 export default function WebsiteSettingsAdminPage() {
   const [facebookGroupLink, setFacebookGroupLink] = useState("");
@@ -18,7 +18,7 @@ export default function WebsiteSettingsAdminPage() {
       const json = await res.json();
       if (json.success && json.data) {
         setFacebookGroupLink(json.data.facebookGroupLink || "https://facebook.com");
-        setSiteNotice(json.data.siteNotice || "");
+        setSiteNotice(json.data.siteNotice || "Welcome to Betbuzz365 Official Agent Directory");
       }
     } catch (err: any) {
       setErrorMessage("Failed to load settings: " + err.message);
@@ -52,7 +52,7 @@ export default function WebsiteSettingsAdminPage() {
         throw new Error(json.error || "Failed to update settings.");
       }
 
-      setSuccessMessage("Website settings updated successfully!");
+      setSuccessMessage("Website configurations saved successfully!");
     } catch (err: any) {
       setErrorMessage(err.message || "An unexpected error occurred.");
     } finally {
@@ -61,93 +61,142 @@ export default function WebsiteSettingsAdminPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl">
       {/* Header */}
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-white font-hind">
-          Facebook Group & Site Settings
+        <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          Website & Social Settings
         </h2>
-        <p className="text-xs md:text-sm text-gray font-hind">
-          Update the dynamic official Facebook group link and global site notices
+        <p className="text-xs sm:text-sm text-gray">
+          Configure dynamic social links and site announcements
         </p>
       </div>
 
-      {/* Notifications */}
+      {/* Alerts */}
       {successMessage && (
-        <div className="p-3 rounded-[8px] bg-success/15 border border-success/30 text-success text-xs md:text-sm font-hind flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 flex-shrink-0" />
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-3 rounded-[8px] bg-error/15 border border-error/30 text-error text-xs md:text-sm font-hind flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs sm:text-sm flex items-center gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Settings Form */}
-      <form onSubmit={handleSubmit} className="bg-light_black p-6 rounded-[10px] border border-white/5 space-y-6">
-        {/* Section: Facebook Group Settings */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-white/10">
-            <Facebook className="w-5 h-5 text-blue" />
-            <h3 className="text-base font-semibold text-primary font-hind">
-              Facebook Group Settings
-            </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Main Settings Form */}
+        <form
+          onSubmit={handleSubmit}
+          className="lg:col-span-2 bg-[#12161d] p-4 sm:p-6 rounded-2xl border border-white/10 space-y-5 shadow-xl"
+        >
+          {/* Section: Facebook Group */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+              <Facebook className="w-4 h-4 text-blue" />
+              <h3 className="text-sm font-bold text-white">
+                Official Facebook Group
+              </h3>
+            </div>
+
+            <div>
+              <label className="block text-gray text-xs font-medium mb-1">
+                Facebook Group URL <span className="text-primary">*</span>
+              </label>
+              <input
+                type="url"
+                value={facebookGroupLink}
+                onChange={(e) => setFacebookGroupLink(e.target.value)}
+                placeholder="https://facebook.com/groups/..."
+                required
+                className="w-full px-3 py-2.5 rounded-xl bg-[#090d12] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm font-mono"
+              />
+              <p className="text-[11px] text-gray/70 mt-1">
+                Target link for the "এখানে ক্লিক করুন" banner on the homepage.
+              </p>
+            </div>
           </div>
 
+          {/* Section: Site Notice */}
+          <div className="space-y-3 pt-3 border-t border-white/10">
+            <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+              <Globe className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-bold text-white">
+                Portal Announcement Notice
+              </h3>
+            </div>
+
+            <div>
+              <label className="block text-gray text-xs font-medium mb-1">
+                Banner Message Text
+              </label>
+              <textarea
+                rows={3}
+                value={siteNotice}
+                onChange={(e) => setSiteNotice(e.target.value)}
+                placeholder="Enter announcement text..."
+                className="w-full px-3 py-2.5 rounded-xl bg-[#090d12] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="pt-2 flex justify-end">
+            <button
+              type="submit"
+              disabled={saving || loading}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-amber-400 text-deep_black font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <Check className="w-4 h-4 stroke-[3]" />
+              <span>{saving ? "Saving..." : "Save Settings"}</span>
+            </button>
+          </div>
+        </form>
+
+        {/* Live Preview Card */}
+        <div className="bg-[#12161d] p-4 sm:p-5 rounded-2xl border border-white/10 space-y-4 shadow-xl flex flex-col justify-between">
           <div>
-            <label className="text-white text-xs md:text-sm font-hind block mb-1.5 font-medium">
-              Official Facebook Group Link URL *
-            </label>
-            <input
-              type="url"
-              value={facebookGroupLink}
-              onChange={(e) => setFacebookGroupLink(e.target.value)}
-              placeholder="https://facebook.com/groups/..."
-              required
-              className="w-full py-2.5 px-3 rounded-[8px] bg-deep_black outline-none text-white text-sm border border-white/10 focus:border-primary transition-colors font-sans"
-            />
-            <p className="text-gray text-[11px] font-hind mt-1.5">
-              This link will be dynamically opened when visitors click "এখানে ক্লিক করুন" on the homepage official banner.
+            <h4 className="text-xs uppercase font-bold text-primary tracking-wider mb-2">
+              Live Banner Preview
+            </h4>
+            <p className="text-xs text-gray mb-3">
+              How the official group banner appears to visitors on mobile and desktop:
             </p>
+
+            <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-900 text-white space-y-2">
+              <div className="flex items-center gap-2">
+                <Facebook className="w-4 h-4" />
+                <span className="text-xs font-bold">অফিসিয়াল ফেসবুক গ্রুপ</span>
+              </div>
+              <p className="text-[11px] opacity-85 leading-snug">
+                আমাদের অফিশিয়াল ফেসবুক গ্রুপে যুক্ত হতে নিচের বাটনে চাপুন।
+              </p>
+              <a
+                href={facebookGroupLink || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-3 py-1 bg-white text-blue-900 rounded-lg text-xs font-bold"
+              >
+                এখানে ক্লিক করুন →
+              </a>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-white/5">
+            <a
+              href="/"
+              target="_blank"
+              className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Preview on Public Site</span>
+            </a>
           </div>
         </div>
-
-        {/* Section: Optional Site Notice */}
-        <div className="space-y-4 pt-4 border-t border-white/10">
-          <h3 className="text-base font-semibold text-primary font-hind">
-            Global Announcement / Notice
-          </h3>
-
-          <div>
-            <label className="text-white text-xs md:text-sm font-hind block mb-1.5 font-medium">
-              Site Announcement Message
-            </label>
-            <textarea
-              rows={3}
-              value={siteNotice}
-              onChange={(e) => setSiteNotice(e.target.value)}
-              placeholder="Enter optional announcement text..."
-              className="w-full py-2.5 px-3 rounded-[8px] bg-deep_black outline-none text-white text-sm border border-white/10 focus:border-primary transition-colors font-hind"
-            />
-          </div>
-        </div>
-
-        {/* Action Button */}
-        <div className="pt-2 flex justify-end">
-          <button
-            type="submit"
-            disabled={saving || loading}
-            className="px-6 py-2.5 rounded-[8px] bg-primary text-deep_black font-bold text-sm font-hind hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50 shadow-md shadow-primary/20"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? "Saving Changes..." : "Save Settings"}</span>
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

@@ -3,11 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { AgentTable } from "@/components/agent/AgentTable";
 import { useModals } from "@/components/layout/AppWrapper";
-import { INITIAL_AGENTS } from "@/lib/data/agents";
 
 export default function MasterPage() {
   const { openView, openReport } = useModals();
-  const [agents, setAgents] = useState<any[]>(INITIAL_AGENTS);
+  const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,7 +14,7 @@ export default function MasterPage() {
       try {
         const res = await fetch("/api/agents?category=master&status=active");
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           setAgents(json.data);
         }
       } catch (err) {

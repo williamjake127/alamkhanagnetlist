@@ -1,50 +1,71 @@
 "use client";
 
 import React from "react";
-import { Menu, LogOut, Database } from "lucide-react";
+import Link from "next/link";
+import { Menu, LogOut, Globe, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 interface AdminNavbarProps {
   onToggleSidebar: () => void;
+  onOpenAddModal?: () => void;
   title?: string;
 }
 
-export function AdminNavbar({ onToggleSidebar, title = "Admin Dashboard" }: AdminNavbarProps) {
-  const { user, logout, isDemoMode } = useAuth();
+export function AdminNavbar({
+  onToggleSidebar,
+  onOpenAddModal,
+  title = "Admin Dashboard",
+}: AdminNavbarProps) {
+  const { user, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-30 bg-light_black/90 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-30 bg-[#0e1217]/90 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
+      {/* Left Title & Mobile Menu Button */}
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
-          className="p-1.5 rounded-[6px] bg-deep_black text-white hover:text-primary lg:hidden"
+          className="p-1.5 rounded-lg bg-white/5 text-white hover:text-primary hover:bg-white/10 lg:hidden transition-colors"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <h1 className="text-base md:text-lg font-semibold text-white font-hind">{title}</h1>
+        <div>
+          <h1 className="text-sm sm:text-base md:text-lg font-bold text-white font-hind leading-tight">
+            {title}
+          </h1>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Status indicator */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-deep_black border border-white/5 text-[11px] text-gray">
-          <Database className="w-3 h-3 text-success" />
-          <span>MongoDB Live</span>
-        </div>
-
-        {isDemoMode && (
-          <span className="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded font-mono">
-            Dev Mode
-          </span>
+      {/* Right Actions */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {onOpenAddModal && (
+          <button
+            type="button"
+            onClick={onOpenAddModal}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-deep_black text-xs font-bold font-hind hover:opacity-90 transition-all shadow-sm shadow-primary/20"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Agent</span>
+          </button>
         )}
+
+        <Link
+          href="/"
+          target="_blank"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 text-gray hover:text-white hover:bg-white/10 text-xs font-hind transition-colors"
+          title="View Public Website"
+        >
+          <Globe className="w-3.5 h-3.5 text-primary" />
+          <span className="hidden md:inline">Public Site</span>
+        </Link>
 
         {user && (
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 text-xs text-gray hover:text-error transition-colors px-2 py-1 rounded bg-deep_black hover:bg-white/5"
+            className="flex items-center gap-1 text-xs text-gray hover:text-rose-400 transition-colors p-1.5 rounded-lg bg-white/5 hover:bg-white/10"
+            title="Sign Out"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Logout</span>
+            <LogOut className="w-4 h-4" />
           </button>
         )}
       </div>
