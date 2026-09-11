@@ -90,36 +90,45 @@ const SiteDataContext = createContext<SiteDataContextType>({
 
 export const useSiteData = () => useContext(SiteDataContext);
 
-// Cache keys
+// LocalStorage cache keys
 const CACHE_KEY_AGENTS = "bb365_cached_agents";
 const CACHE_KEY_SETTINGS = "bb365_cached_settings";
 const CACHE_KEY_SUPPORT = "bb365_cached_support";
-// Timestamp keys — store when each cache entry was last written
 const CACHE_KEY_AGENTS_TS = "bb365_cached_agents_ts";
 const CACHE_KEY_SETTINGS_TS = "bb365_cached_settings_ts";
 const CACHE_KEY_SUPPORT_TS = "bb365_cached_support_ts";
 
-// Cache TTL: 60 seconds. After this the background refresh runs.
-const CACHE_TTL_MS = 60_000;
+// Fast cache revalidation throttle (5 seconds)
+const CACHE_THROTTLE_MS = 5_000;
 
-// Module-level flag — persists for the lifetime of the JS session (survives SPA navigations).
-// Prevents redundant network calls when navigating between pages.
-let sessionFetched = false;
+// Cross-tab real-time sync channel
+const SYNC_CHANNEL_NAME = "agentlist_sync_channel";
+function broadcastSync(type: string, data?: any) {
+  if (typeof window !== "undefined") {
+    try {
+      if ("BroadcastChannel" in window) {
+        const ch = new BroadcastChannel(SYNC_CHANNEL_NAME);
+        ch.postMessage({ type, data });
+        ch.close();
+      }
+    } catch (e) {}
+  }
+}
 
-function isCacheStale(tsKey: string): boolean {
+function isCacheThrottled(tsKey: string): boolean {
   try {
     const ts = localStorage.getItem(tsKey);
-    if (!ts) return true;
-    return Date.now() - Number(ts) > CACHE_TTL_MS;
+    if (!ts) return false;
+    return Date.now() - Number(ts) < CACHE_THROTTLE_MS;
   } catch {
-    return true;
+    return false;
   }
 }
 
 function hasCachedData(): boolean {
   try {
     return (
-      !!localStorage.getItem(CACHE_KEY_AGENTS) &&
+      !!localStorage.getItem(CACHE_KEY_AGENTS) ||
       !!localStorage.getItem(CACHE_KEY_SETTINGS)
     );
   } catch {
@@ -131,21 +140,17 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
   const [settings, setSettings] = useState<WebsiteSettingsData>(DEFAULT_SETTINGS);
   const [supportList, setSupportList] = useState<SupportContact[]>([]);
-  // isLoading is only true on the VERY first cold load (no localStorage cache at all)
   const [isLoading, setIsLoading] = useState(false);
-  const hasCacheRef = useRef(false);
+  const isRefreshingRef = useRef(false);
 
-  // ─── Step 1: Instant hydration from localStorage ───────────────────────────
-  // Runs synchronously on first client mount, before any network call.
+  // ─── Step 1: Instant 0ms Hydration from Cache ───────────────────────────────
   useEffect(() => {
-    let cacheFound = false;
     try {
       const cachedAgents = localStorage.getItem(CACHE_KEY_AGENTS);
       if (cachedAgents) {
         const parsed = JSON.parse(cachedAgents);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setAgents(parsed);
-          cacheFound = true;
         }
       }
       const cachedSettings = localStorage.getItem(CACHE_KEY_SETTINGS);
@@ -153,7 +158,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(cachedSettings);
         if (parsed && typeof parsed === "object") {
           setSettings(parsed);
-          cacheFound = true;
         }
       }
       const cachedSupport = localStorage.getItem(CACHE_KEY_SUPPORT);
@@ -162,7 +166,26 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray(parsed)) setSupportList(parsed);
       }
     } catch (e) {}
-    hasCacheRef.current = cacheFound;
+  }, []);
+
+  // ─── Cross-Tab Instant Sync ────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
+    try {
+      const channel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+      channel.onmessage = (event) => {
+        if (event.data?.type === "AGENTS_UPDATED" && Array.isArray(event.data.data)) {
+          setAgents(event.data.data);
+        } else if (event.data?.type === "SETTINGS_UPDATED" && event.data.data) {
+          setSettings(event.data.data);
+        } else if (event.data?.type === "SUPPORT_UPDATED" && Array.isArray(event.data.data)) {
+          setSupportList(event.data.data);
+        }
+      };
+      return () => {
+        channel.close();
+      };
+    } catch (e) {}
   }, []);
 
   // ─── SEO & Dynamic Head Updater ────────────────────────────────────────────
@@ -223,30 +246,26 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     settings.siteFavicon,
   ]);
 
-  // ─── Core refresh function ─────────────────────────────────────────────────
-  // Never shows a blocking spinner unless there is zero cached data.
+  // ─── Core Silent Background Refresh ────────────────────────────────────────
+  // Always runs in the background. Never blocks or flickers the UI if cached data exists.
   const refreshData = useCallback(async (opts?: { force?: boolean }) => {
     const force = opts?.force ?? false;
 
-    // Skip network call if:
-    //  - We've already fetched in this JS session (SPA navigation), AND
-    //  - The caller didn't explicitly force a refresh.
-    if (sessionFetched && !force) return;
+    // Avoid concurrent fetches
+    if (isRefreshingRef.current) return;
 
-    // Also skip if cache is fresh and no force flag.
-    const agentsStale = isCacheStale(CACHE_KEY_AGENTS_TS);
-    const settingsStale = isCacheStale(CACHE_KEY_SETTINGS_TS);
-    const supportStale = isCacheStale(CACHE_KEY_SUPPORT_TS);
-    const anyStale = agentsStale || settingsStale || supportStale;
-
-    if (!anyStale && !force) {
-      sessionFetched = true;
-      return;
+    // Throttle checks unless forced
+    if (!force) {
+      const throttled =
+        isCacheThrottled(CACHE_KEY_AGENTS_TS) &&
+        isCacheThrottled(CACHE_KEY_SETTINGS_TS) &&
+        isCacheThrottled(CACHE_KEY_SUPPORT_TS);
+      if (throttled) return;
     }
 
-    // Only show the loading spinner if there is NO cache at all (true cold start)
-    const coldStart = !hasCacheRef.current && !hasCachedData();
+    const coldStart = !hasCachedData();
     if (coldStart) setIsLoading(true);
+    isRefreshingRef.current = true;
 
     try {
       const [agentRes, settingsRes, supportRes] = await Promise.allSettled([
@@ -321,19 +340,43 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
           } catch (e) {}
         }
       }
-
-      sessionFetched = true;
     } catch (err) {
       console.error("Background data refresh error:", err);
     } finally {
+      isRefreshingRef.current = false;
       if (coldStart) setIsLoading(false);
     }
   }, []);
 
-  // ─── Step 2: Background refresh on mount ──────────────────────────────────
-  // Runs after the localStorage hydration above. Never blocks the UI.
+  // ─── Step 2: Background revalidation triggers ──────────────────────────────
+  // Trigger on initial mount
   useEffect(() => {
-    refreshData();
+    refreshData({ force: true });
+  }, [refreshData]);
+
+  // Trigger on window focus and visibility change (instant sync when switching tabs)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onFocus = () => refreshData({ force: true });
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshData({ force: true });
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [refreshData]);
+
+  // Background heartbeat (every 10 seconds) so visitors always have live data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshData();
+    }, 10_000);
+    return () => clearInterval(interval);
   }, [refreshData]);
 
   // ─── Categorized retrieval ─────────────────────────────────────────────────
@@ -355,10 +398,21 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     return supportList.filter((s) => s.status !== "inactive");
   }, [supportList]);
 
-  // ─── Settings (already optimistic) ────────────────────────────────────────
+  // ─── Optimistic Settings Update (0ms UI latency) ───────────────────────────
   const updateSettings = async (newSettings: Partial<WebsiteSettingsData>): Promise<boolean> => {
+    const previousSettings = settings;
+    const updated = { ...settings, ...newSettings };
+
+    // 1. Instant 0ms update to state and cache
+    setSettings(updated);
     try {
-      const updated = { ...settings, ...newSettings };
+      localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SETTINGS_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("SETTINGS_UPDATED", updated);
+
+    // 2. Persist to MongoDB in background
+    try {
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -366,22 +420,62 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setSettings(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_SETTINGS_TS, String(Date.now()));
-        } catch (e) {}
         return true;
       }
+      // Rollback on failure
+      setSettings(previousSettings);
+      try {
+        localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(previousSettings));
+      } catch (e) {}
+      broadcastSync("SETTINGS_UPDATED", previousSettings);
       return false;
     } catch (e) {
+      setSettings(previousSettings);
+      try {
+        localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(previousSettings));
+      } catch (err) {}
+      broadcastSync("SETTINGS_UPDATED", previousSettings);
       console.error("Save settings error:", e);
       return false;
     }
   };
 
-  // ─── Agent mutations (already optimistic) ─────────────────────────────────
+  // ─── Optimistic Agent Add (0ms UI latency) ─────────────────────────────────
   const addAgent = async (agentPayload: any): Promise<boolean> => {
+    const tempId = `agent_${Date.now()}`;
+    const cleanPhone = agentPayload.phone?.trim() || "";
+    const whatsappLink =
+      agentPayload.whatsapp?.trim() ||
+      `https://wa.me/${cleanPhone.replace(/[^0-9+]/g, "")}`;
+
+    const optimisticAgent: Agent = {
+      id: agentPayload.agentId?.trim() || tempId,
+      _id: tempId,
+      name: agentPayload.name?.trim(),
+      agentId: agentPayload.agentId?.trim() || tempId,
+      category: agentPayload.type || agentPayload.category || "master",
+      type: agentPayload.type || agentPayload.category || "master",
+      phone: cleanPhone,
+      whatsapp: whatsappLink,
+      rating: Number(agentPayload.rating) || 5,
+      appLink: agentPayload.appLink?.trim() || "",
+      avatar: agentPayload.avatar,
+      image: agentPayload.image,
+      reportTo: agentPayload.reportTo,
+      status: agentPayload.status || "active",
+    };
+
+    // 1. Instant 0ms update to state and cache
+    const previousAgents = agents;
+    const updated = [optimisticAgent, ...previousAgents];
+    setAgents(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("AGENTS_UPDATED", updated);
+
+    // 2. Persist to MongoDB in background
     try {
       const res = await fetch("/api/agents", {
         method: "POST",
@@ -390,39 +484,71 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       });
       const json = await res.json();
       if (res.ok && json.success && json.data) {
-        const item = json.data;
-        const newAgent: Agent = {
-          id: item.agentId || item.id || item._id,
-          _id: item._id,
-          name: item.name,
-          agentId: item.agentId || item.id,
-          category: item.type || item.category || "master",
-          type: item.type || item.category || "master",
-          phone: item.phone,
-          whatsapp: item.whatsapp,
-          rating: item.rating || 5,
-          appLink: item.appLink,
-          avatar: item.avatar,
-          image: item.image,
-          reportTo: item.reportTo,
-          status: item.status || "active",
-        };
-        const updated = [newAgent, ...agents];
-        setAgents(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-        } catch (e) {}
+        const persisted = json.data;
+        setAgents((curr) => {
+          const finalAgents = curr.map((a) =>
+            a._id === tempId || a.agentId === optimisticAgent.agentId
+              ? {
+                  ...a,
+                  _id: persisted._id || a._id,
+                  id: persisted.agentId || a.id,
+                  reportTo: persisted.reportTo || a.reportTo,
+                }
+              : a
+          );
+          try {
+            localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(finalAgents));
+            localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+          } catch (e) {}
+          broadcastSync("AGENTS_UPDATED", finalAgents);
+          return finalAgents;
+        });
         return true;
+      } else {
+        // Rollback on server error
+        setAgents(previousAgents);
+        try {
+          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+        } catch (e) {}
+        broadcastSync("AGENTS_UPDATED", previousAgents);
+        return false;
       }
-      return false;
     } catch (e) {
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (err) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       console.error("Add agent error:", e);
       return false;
     }
   };
 
+  // ─── Optimistic Agent Update (0ms UI latency) ──────────────────────────────
   const updateAgent = async (id: string, agentPayload: any): Promise<boolean> => {
+    const previousAgents = agents;
+    const updated = agents.map((a) => {
+      const aid = (a as any)._id || a.id || (a as any).agentId;
+      if (aid === id || a.id === id) {
+        return {
+          ...a,
+          ...agentPayload,
+          category: agentPayload.type || agentPayload.category || a.category,
+          type: agentPayload.type || agentPayload.category || (a as any).type,
+        };
+      }
+      return a;
+    });
+
+    // 1. Instant 0ms update
+    setAgents(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("AGENTS_UPDATED", updated);
+
+    // 2. Persist in background
     try {
       const res = await fetch(`/api/agents/${id}`, {
         method: "PUT",
@@ -431,65 +557,95 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        const updated = agents.map((a) => {
-          const aid = (a as any)._id || a.id || (a as any).agentId;
-          if (aid === id || a.id === id) {
-            return {
-              ...a,
-              ...agentPayload,
-              category: agentPayload.type || agentPayload.category || a.category,
-              type: agentPayload.type || agentPayload.category || (a as any).type,
-            };
-          }
-          return a;
-        });
-        setAgents(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-        } catch (e) {}
         return true;
       }
+      // Rollback on failure
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (e) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       return false;
     } catch (e) {
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (err) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       console.error("Update agent error:", e);
       return false;
     }
   };
 
+  // ─── Optimistic Agent Delete (0ms UI latency) ──────────────────────────────
   const deleteAgent = async (id: string): Promise<boolean> => {
+    const previousAgents = agents;
+    const updated = agents.filter((a) => {
+      const aid = (a as any)._id || a.id || (a as any).agentId;
+      return aid !== id && a.id !== id;
+    });
+
+    // 1. Instant 0ms update
+    setAgents(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("AGENTS_UPDATED", updated);
+
+    // 2. Persist in background
     try {
       const res = await fetch(`/api/agents/${id}`, { method: "DELETE" });
       const json = await res.json();
       if (res.ok && json.success) {
-        const updated = agents.filter((a) => {
-          const aid = (a as any)._id || a.id || (a as any).agentId;
-          return aid !== id && a.id !== id;
-        });
-        setAgents(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-        } catch (e) {}
         return true;
       }
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (e) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       return false;
     } catch (e) {
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (err) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       console.error("Delete agent error:", e);
       return false;
     }
   };
 
+  // ─── Optimistic Agent Status Toggle (0ms UI latency) ───────────────────────
   const toggleAgentStatus = async (id: string): Promise<boolean> => {
+    const previousAgents = agents;
     let targetStatus = "active";
-    const currentAgent = agents.find((a) => {
+    const current = agents.find((a) => {
       const aid = (a as any)._id || a.id || (a as any).agentId;
       return aid === id || a.id === id;
     });
-    if (currentAgent) {
-      targetStatus = currentAgent.status === "active" ? "inactive" : "active";
+    if (current) {
+      targetStatus = current.status === "active" ? "inactive" : "active";
     }
 
+    const updated = agents.map((a) => {
+      const aid = (a as any)._id || a.id || (a as any).agentId;
+      if (aid === id || a.id === id) {
+        return { ...a, status: targetStatus as "active" | "inactive" };
+      }
+      return a;
+    });
+
+    // 1. Instant 0ms update
+    setAgents(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("AGENTS_UPDATED", updated);
+
+    // 2. Persist in background
     try {
       const res = await fetch(`/api/agents/${id}`, {
         method: "PUT",
@@ -498,29 +654,50 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        const updated = agents.map((a) => {
-          const aid = (a as any)._id || a.id || (a as any).agentId;
-          if (aid === id || a.id === id) {
-            return { ...a, status: targetStatus as "active" | "inactive" };
-          }
-          return a;
-        });
-        setAgents(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-        } catch (e) {}
         return true;
       }
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (e) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       return false;
     } catch (e) {
+      setAgents(previousAgents);
+      try {
+        localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(previousAgents));
+      } catch (err) {}
+      broadcastSync("AGENTS_UPDATED", previousAgents);
       console.error("Toggle status error:", e);
       return false;
     }
   };
 
-  // ─── Support mutations (already optimistic) ────────────────────────────────
+  // ─── Optimistic Support Mutations (0ms UI latency) ─────────────────────────
   const addSupport = async (contactPayload: any): Promise<boolean> => {
+    const tempId = `support_${Date.now()}`;
+    const cleanPhone = contactPayload.phone?.trim() || "";
+    const optimisticSupport: SupportContact = {
+      _id: tempId,
+      id: tempId,
+      name: contactPayload.name?.trim(),
+      phone: cleanPhone,
+      whatsappLink:
+        contactPayload.whatsappLink?.trim() ||
+        `https://wa.me/${cleanPhone.replace(/[^0-9+]/g, "")}`,
+      hours: contactPayload.hours || "24/7 Service",
+      status: contactPayload.status || "active",
+    };
+
+    const previousSupport = supportList;
+    const updated = [optimisticSupport, ...previousSupport];
+    setSupportList(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("SUPPORT_UPDATED", updated);
+
     try {
       const res = await fetch("/api/support", {
         method: "POST",
@@ -528,23 +705,51 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(contactPayload),
       });
       const json = await res.json();
-      if (json.success && json.data) {
-        const updated = [json.data, ...supportList];
-        setSupportList(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
-        } catch (e) {}
+      if (res.ok && json.success && json.data) {
+        const persisted = json.data;
+        setSupportList((curr) => {
+          const finalSupport = curr.map((s) =>
+            s._id === tempId ? { ...s, _id: persisted._id || s._id, id: persisted._id || s.id } : s
+          );
+          try {
+            localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(finalSupport));
+            localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
+          } catch (e) {}
+          broadcastSync("SUPPORT_UPDATED", finalSupport);
+          return finalSupport;
+        });
         return true;
       }
+      setSupportList(previousSupport);
+      try {
+        localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(previousSupport));
+      } catch (e) {}
+      broadcastSync("SUPPORT_UPDATED", previousSupport);
       return false;
     } catch (e) {
+      setSupportList(previousSupport);
+      try {
+        localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(previousSupport));
+      } catch (err) {}
+      broadcastSync("SUPPORT_UPDATED", previousSupport);
       console.error("Add support error:", e);
       return false;
     }
   };
 
   const updateSupport = async (id: string, contactPayload: any): Promise<boolean> => {
+    const previousSupport = supportList;
+    const updated = supportList.map((s) =>
+      s._id === id || s.id === id ? { ...s, ...contactPayload } : s
+    );
+
+    setSupportList(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("SUPPORT_UPDATED", updated);
+
     try {
       const res = await fetch(`/api/support/${id}`, {
         method: "PUT",
@@ -553,38 +758,54 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        const updated = supportList.map((s) =>
-          s._id === id || s.id === id ? { ...s, ...contactPayload } : s
-        );
-        setSupportList(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
-        } catch (e) {}
         return true;
       }
+      setSupportList(previousSupport);
+      try {
+        localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(previousSupport));
+      } catch (e) {}
+      broadcastSync("SUPPORT_UPDATED", previousSupport);
       return false;
     } catch (e) {
+      setSupportList(previousSupport);
+      try {
+        localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(previousSupport));
+      } catch (err) {}
+      broadcastSync("SUPPORT_UPDATED", previousSupport);
       console.error("Update support error:", e);
       return false;
     }
   };
 
   const deleteSupport = async (id: string): Promise<boolean> => {
+    const previousSupport = supportList;
+    const updated = supportList.filter((s) => s._id !== id && s.id !== id);
+
+    setSupportList(updated);
+    try {
+      localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
+    } catch (e) {}
+    broadcastSync("SUPPORT_UPDATED", updated);
+
     try {
       const res = await fetch(`/api/support/${id}`, { method: "DELETE" });
       const json = await res.json();
       if (res.ok && json.success) {
-        const updated = supportList.filter((s) => s._id !== id && s.id !== id);
-        setSupportList(updated);
-        try {
-          localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
-          localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
-        } catch (e) {}
         return true;
       }
+      setSupportList(previousSupport);
+      try {
+        localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(previousSupport));
+      } catch (e) {}
+      broadcastSync("SUPPORT_UPDATED", previousSupport);
       return false;
     } catch (e) {
+      setSupportList(previousSupport);
+      try {
+        localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(previousSupport));
+      } catch (err) {}
+      broadcastSync("SUPPORT_UPDATED", previousSupport);
       console.error("Delete support error:", e);
       return false;
     }
@@ -593,7 +814,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const clearAllDatabase = async (): Promise<boolean> => {
     setAgents([]);
     setSupportList([]);
-    sessionFetched = false; // Allow next mount to re-fetch
     try {
       localStorage.removeItem(CACHE_KEY_AGENTS);
       localStorage.removeItem(CACHE_KEY_SETTINGS);
@@ -602,6 +822,8 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(CACHE_KEY_SETTINGS_TS);
       localStorage.removeItem(CACHE_KEY_SUPPORT_TS);
     } catch (e) {}
+    broadcastSync("AGENTS_UPDATED", []);
+    broadcastSync("SUPPORT_UPDATED", []);
 
     try {
       const res = await fetch("/api/admin/clear-db", { method: "POST" });

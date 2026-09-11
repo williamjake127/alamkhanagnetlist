@@ -3,6 +3,9 @@ import { connectToDatabase } from "@/lib/mongodb";
 import CustomerSupport from "@/models/CustomerSupport";
 import { memoryStore, StoredSupport } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -18,7 +21,7 @@ export async function GET(req: NextRequest) {
         query.status = "active";
       }
 
-      const supports = await CustomerSupport.find(query).sort({ createdAt: -1 });
+      const supports = await CustomerSupport.find(query).sort({ createdAt: -1 }).lean();
       return NextResponse.json(
         { success: true, count: supports.length, data: supports },
         { headers: { "Cache-Control": "no-store" } }

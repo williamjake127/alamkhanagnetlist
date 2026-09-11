@@ -4,6 +4,9 @@ import Agent from "@/models/Agent";
 import { resolveAgentHierarchy } from "@/lib/hierarchy";
 import { memoryStore, StoredAgent } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -38,7 +41,8 @@ export async function GET(req: NextRequest) {
 
       const agents = await Agent.find(query)
         .populate("parentId", "name agentId type phone whatsapp")
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .lean();
 
       return NextResponse.json(
         { success: true, count: agents.length, data: agents },

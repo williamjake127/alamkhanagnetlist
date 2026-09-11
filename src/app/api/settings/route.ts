@@ -3,12 +3,15 @@ import { connectToDatabase } from "@/lib/mongodb";
 import WebsiteSettings from "@/models/WebsiteSettings";
 import { memoryStore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const mongooseConn = await connectToDatabase();
 
     if (mongooseConn && mongooseConn.connection.readyState === 1) {
-      let settings = await WebsiteSettings.findOne();
+      let settings = await WebsiteSettings.findOne().lean();
       if (!settings) {
         settings = await WebsiteSettings.create({
           siteName: "",
