@@ -98,11 +98,17 @@ export function AgentFormModal({
     }
 
     try {
+      let ok = false;
       if (agentToEdit) {
         const aid = agentToEdit._id || agentToEdit.id || agentToEdit.agentId;
-        await updateAgent(aid, formData);
+        ok = await updateAgent(aid, formData);
       } else {
-        await addAgent(formData);
+        ok = await addAgent(formData);
+      }
+
+      if (!ok) {
+        setError("Failed to save to database. Please check your network or MongoDB connection.");
+        return;
       }
 
       onSuccess();

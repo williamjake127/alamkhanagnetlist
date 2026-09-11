@@ -269,6 +269,8 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
             whatsapp: item.whatsapp,
             rating: item.rating || 5,
             appLink: item.appLink,
+            avatar: item.avatar,
+            image: item.image,
             reportTo: item.reportTo,
             status: item.status || "active",
           }));
@@ -355,21 +357,23 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Settings (already optimistic) ────────────────────────────────────────
   const updateSettings = async (newSettings: Partial<WebsiteSettingsData>): Promise<boolean> => {
-    const updated = { ...settings, ...newSettings };
-    setSettings(updated);
     try {
-      localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(updated));
-      localStorage.setItem(CACHE_KEY_SETTINGS_TS, String(Date.now()));
-    } catch (e) {}
-
-    try {
+      const updated = { ...settings, ...newSettings };
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
       });
       const json = await res.json();
-      return json.success;
+      if (res.ok && json.success) {
+        setSettings(updated);
+        try {
+          localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_SETTINGS_TS, String(Date.now()));
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Save settings error:", e);
       return false;
@@ -385,7 +389,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(agentPayload),
       });
       const json = await res.json();
-      if (json.success && json.data) {
+      if (res.ok && json.success && json.data) {
         const item = json.data;
         const newAgent: Agent = {
           id: item.agentId || item.id || item._id,
@@ -398,6 +402,8 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
           whatsapp: item.whatsapp,
           rating: item.rating || 5,
           appLink: item.appLink,
+          avatar: item.avatar,
+          image: item.image,
           reportTo: item.reportTo,
           status: item.status || "active",
         };
@@ -417,24 +423,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateAgent = async (id: string, agentPayload: any): Promise<boolean> => {
-    const updated = agents.map((a) => {
-      const aid = (a as any)._id || a.id || (a as any).agentId;
-      if (aid === id || a.id === id) {
-        return {
-          ...a,
-          ...agentPayload,
-          category: agentPayload.type || agentPayload.category || a.category,
-          type: agentPayload.type || agentPayload.category || (a as any).type,
-        };
-      }
-      return a;
-    });
-    setAgents(updated);
-    try {
-      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-    } catch (e) {}
-
     try {
       const res = await fetch(`/api/agents/${id}`, {
         method: "PUT",
@@ -442,7 +430,27 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(agentPayload),
       });
       const json = await res.json();
-      return json.success;
+      if (res.ok && json.success) {
+        const updated = agents.map((a) => {
+          const aid = (a as any)._id || a.id || (a as any).agentId;
+          if (aid === id || a.id === id) {
+            return {
+              ...a,
+              ...agentPayload,
+              category: agentPayload.type || agentPayload.category || a.category,
+              type: agentPayload.type || agentPayload.category || (a as any).type,
+            };
+          }
+          return a;
+        });
+        setAgents(updated);
+        try {
+          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Update agent error:", e);
       return false;
@@ -450,20 +458,22 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAgent = async (id: string): Promise<boolean> => {
-    const updated = agents.filter((a) => {
-      const aid = (a as any)._id || a.id || (a as any).agentId;
-      return aid !== id && a.id !== id;
-    });
-    setAgents(updated);
-    try {
-      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-    } catch (e) {}
-
     try {
       const res = await fetch(`/api/agents/${id}`, { method: "DELETE" });
       const json = await res.json();
-      return json.success;
+      if (res.ok && json.success) {
+        const updated = agents.filter((a) => {
+          const aid = (a as any)._id || a.id || (a as any).agentId;
+          return aid !== id && a.id !== id;
+        });
+        setAgents(updated);
+        try {
+          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Delete agent error:", e);
       return false;
@@ -472,19 +482,13 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
 
   const toggleAgentStatus = async (id: string): Promise<boolean> => {
     let targetStatus = "active";
-    const updated = agents.map((a) => {
+    const currentAgent = agents.find((a) => {
       const aid = (a as any)._id || a.id || (a as any).agentId;
-      if (aid === id || a.id === id) {
-        targetStatus = a.status === "active" ? "inactive" : "active";
-        return { ...a, status: targetStatus as "active" | "inactive" };
-      }
-      return a;
+      return aid === id || a.id === id;
     });
-    setAgents(updated);
-    try {
-      localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
-      localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
-    } catch (e) {}
+    if (currentAgent) {
+      targetStatus = currentAgent.status === "active" ? "inactive" : "active";
+    }
 
     try {
       const res = await fetch(`/api/agents/${id}`, {
@@ -493,7 +497,22 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ status: targetStatus }),
       });
       const json = await res.json();
-      return json.success;
+      if (res.ok && json.success) {
+        const updated = agents.map((a) => {
+          const aid = (a as any)._id || a.id || (a as any).agentId;
+          if (aid === id || a.id === id) {
+            return { ...a, status: targetStatus as "active" | "inactive" };
+          }
+          return a;
+        });
+        setAgents(updated);
+        try {
+          localStorage.setItem(CACHE_KEY_AGENTS, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_AGENTS_TS, String(Date.now()));
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Toggle status error:", e);
       return false;
@@ -526,15 +545,6 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSupport = async (id: string, contactPayload: any): Promise<boolean> => {
-    const updated = supportList.map((s) =>
-      s._id === id || s.id === id ? { ...s, ...contactPayload } : s
-    );
-    setSupportList(updated);
-    try {
-      localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
-      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
-    } catch (e) {}
-
     try {
       const res = await fetch(`/api/support/${id}`, {
         method: "PUT",
@@ -542,7 +552,18 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(contactPayload),
       });
       const json = await res.json();
-      return json.success;
+      if (res.ok && json.success) {
+        const updated = supportList.map((s) =>
+          s._id === id || s.id === id ? { ...s, ...contactPayload } : s
+        );
+        setSupportList(updated);
+        try {
+          localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Update support error:", e);
       return false;
@@ -550,17 +571,19 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteSupport = async (id: string): Promise<boolean> => {
-    const updated = supportList.filter((s) => s._id !== id && s.id !== id);
-    setSupportList(updated);
-    try {
-      localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
-      localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
-    } catch (e) {}
-
     try {
       const res = await fetch(`/api/support/${id}`, { method: "DELETE" });
       const json = await res.json();
-      return json.success;
+      if (res.ok && json.success) {
+        const updated = supportList.filter((s) => s._id !== id && s.id !== id);
+        setSupportList(updated);
+        try {
+          localStorage.setItem(CACHE_KEY_SUPPORT, JSON.stringify(updated));
+          localStorage.setItem(CACHE_KEY_SUPPORT_TS, String(Date.now()));
+        } catch (e) {}
+        return true;
+      }
+      return false;
     } catch (e) {
       console.error("Delete support error:", e);
       return false;

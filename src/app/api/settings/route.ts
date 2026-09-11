@@ -28,6 +28,12 @@ export async function GET() {
         { headers: { "Cache-Control": "no-store" } }
       );
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Please try again." },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { success: true, data: memoryStore.settings },
         { headers: { "Cache-Control": "no-store" } }
@@ -92,6 +98,12 @@ export async function POST(req: NextRequest) {
         data: settings,
       });
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot save settings." },
+          { status: 503 }
+        );
+      }
       if (siteName !== undefined) memoryStore.settings.siteName = siteName.trim();
       if (siteLogo !== undefined) memoryStore.settings.siteLogo = siteLogo.trim();
       if (siteFavicon !== undefined) memoryStore.settings.siteFavicon = siteFavicon.trim();

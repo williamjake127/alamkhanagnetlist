@@ -45,7 +45,14 @@ export async function GET(req: NextRequest) {
         { headers: { "Cache-Control": "no-store" } }
       );
     } else {
-      // Use fallback memory store
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Please try again." },
+          { status: 503 }
+        );
+      }
+
+      // Fallback only if MONGODB_URI is completely unconfigured
       let filtered = [...memoryStore.agents];
 
       if (type && type !== "default" && type !== "all") {
@@ -142,7 +149,14 @@ export async function POST(req: NextRequest) {
         { status: 201 }
       );
     } else {
-      // Memory Store logic
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot save agent to persistent database." },
+          { status: 503 }
+        );
+      }
+
+      // Memory Store logic only for local testing without mongo uri
       const existing = memoryStore.agents.find(
         (a) => a.agentId.toLowerCase() === agentId.trim().toLowerCase()
       );

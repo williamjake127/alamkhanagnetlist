@@ -16,6 +16,8 @@ export interface Agent {
   superContact?: string;
   status?: "active" | "inactive";
   appLink?: string;
+  avatar?: string;
+  image?: string;
   reportTo?: {
     admin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
     subAdmin?: { id?: string; name?: string; phone?: string; whatsapp?: string };

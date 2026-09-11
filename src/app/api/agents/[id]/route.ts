@@ -24,6 +24,12 @@ export async function GET(
 
       return NextResponse.json({ success: true, data: agent });
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Please try again." },
+          { status: 503 }
+        );
+      }
       const agent = memoryStore.agents.find((a) => a._id === id || a.agentId === id);
       if (!agent) {
         return NextResponse.json({ success: false, error: "Agent not found" }, { status: 404 });
@@ -100,6 +106,12 @@ export async function PUT(
         data: existingAgent,
       });
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot update agent." },
+          { status: 503 }
+        );
+      }
       const idx = memoryStore.agents.findIndex((a) => a._id === id);
       if (idx === -1) {
         return NextResponse.json({ success: false, error: "Agent not found" }, { status: 404 });
@@ -173,6 +185,12 @@ export async function DELETE(
       }
       return NextResponse.json({ success: true, message: "Agent deleted successfully" });
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot delete agent." },
+          { status: 503 }
+        );
+      }
       const idx = memoryStore.agents.findIndex((a) => a._id === id);
       if (idx === -1) {
         return NextResponse.json({ success: false, error: "Agent not found" }, { status: 404 });

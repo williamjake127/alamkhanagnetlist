@@ -30,7 +30,9 @@ export async function connectToDatabase(): Promise<typeof mongoose | null> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 2500, // Quick timeout if Mongo server not running
+      serverSelectionTimeoutMS: 10000, // 10s for stable cold-start serverless connections
+      connectTimeoutMS: 10000,
+      maxPoolSize: 10,
     };
 
     cached.promise = mongoose
@@ -39,7 +41,7 @@ export async function connectToDatabase(): Promise<typeof mongoose | null> {
         return m;
       })
       .catch((err) => {
-        console.warn("MongoDB connection unavailable (using fallback store):", err.message);
+        console.error("MongoDB connection error:", err.message);
         cached.promise = null;
         return null;
       });

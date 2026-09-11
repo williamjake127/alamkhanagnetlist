@@ -67,11 +67,17 @@ export function SupportFormModal({
         status,
       };
 
+      let ok = false;
       if (supportToEdit) {
         const sid = supportToEdit._id || supportToEdit.id;
-        await updateSupport(sid, payload);
+        ok = await updateSupport(sid, payload);
       } else {
-        await addSupport(payload);
+        ok = await addSupport(payload);
+      }
+
+      if (!ok) {
+        setErrorMessage("Failed to save to database. Please check your network or MongoDB connection.");
+        return;
       }
 
       onSuccess();

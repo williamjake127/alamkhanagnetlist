@@ -39,6 +39,12 @@ export async function PUT(
         data: existing,
       });
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot update support helpline." },
+          { status: 503 }
+        );
+      }
       const idx = memoryStore.supports.findIndex((s) => s._id === id);
       if (idx === -1) {
         return NextResponse.json({ success: false, error: "Support helpline not found" }, { status: 404 });
@@ -82,6 +88,12 @@ export async function DELETE(
       }
       return NextResponse.json({ success: true, message: "Support helpline deleted successfully" });
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot delete support helpline." },
+          { status: 503 }
+        );
+      }
       const idx = memoryStore.supports.findIndex((s) => s._id === id);
       if (idx === -1) {
         return NextResponse.json({ success: false, error: "Support helpline not found" }, { status: 404 });

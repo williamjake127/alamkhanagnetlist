@@ -23,7 +23,7 @@ export function AgentRow({ agent, onView, onReport }: AgentRowProps) {
       <div className="col-span-3 flex items-center gap-1.5 md:gap-2">
         <figure className="relative w-6 h-6 md:w-9 md:h-9 flex-shrink-0">
           <Image
-            src="/icons/avatar.svg"
+            src={agent.avatar || agent.image || "/icons/avatar.svg"}
             alt={agentName}
             fill
             className="rounded-full object-cover"

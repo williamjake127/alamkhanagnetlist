@@ -44,7 +44,7 @@ export function QuickAgentCard({ onReport }: QuickAgentCardProps) {
             <div className="flex items-center gap-2">
               <div className="relative w-8 md:w-10 h-8 md:h-10 rounded-full flex-shrink-0">
                 <Image
-                  src="/icons/avatar.svg"
+                  src={agent.avatar || agent.image || "/icons/avatar.svg"}
                   alt="avatar"
                   fill
                   className="rounded-full object-cover"

@@ -24,6 +24,12 @@ export async function GET(req: NextRequest) {
         { headers: { "Cache-Control": "no-store" } }
       );
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Please try again." },
+          { status: 503 }
+        );
+      }
       let filtered = [...memoryStore.supports];
       if (status && status !== "all") {
         filtered = filtered.filter((s) => s.status === status);
@@ -77,6 +83,12 @@ export async function POST(req: NextRequest) {
         { status: 201 }
       );
     } else {
+      if (process.env.MONGODB_URI) {
+        return NextResponse.json(
+          { success: false, error: "Database connection unavailable. Cannot save support contact." },
+          { status: 503 }
+        );
+      }
       const newSupport: StoredSupport = {
         _id: `support_${Date.now()}`,
         name: name.trim(),
