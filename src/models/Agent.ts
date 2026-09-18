@@ -10,7 +10,7 @@ export interface IReportContact {
 export interface IAgent extends Document {
   name: string;
   agentId: string;
-  type: "admin" | "sub_admin" | "super" | "master";
+  type: "admin" | "super_admin" | "sub_admin" | "super" | "master";
   phone: string;
   whatsapp: string;
   rating: number;
@@ -18,6 +18,7 @@ export interface IAgent extends Document {
   parentId?: mongoose.Types.ObjectId | string | null;
   reportTo?: {
     admin?: IReportContact;
+    superAdmin?: IReportContact;
     subAdmin?: IReportContact;
     super?: IReportContact;
   };
@@ -42,7 +43,7 @@ const AgentSchema = new Schema<IAgent>(
     agentId: { type: String, required: true, unique: true, trim: true },
     type: {
       type: String,
-      enum: ["admin", "sub_admin", "super", "master"],
+      enum: ["admin", "super_admin", "sub_admin", "super", "master"],
       required: true,
     },
     phone: { type: String, required: true, trim: true },
@@ -52,6 +53,7 @@ const AgentSchema = new Schema<IAgent>(
     parentId: { type: Schema.Types.ObjectId, ref: "Agent", default: null },
     reportTo: {
       admin: { type: ReportContactSchema, default: () => ({}) },
+      superAdmin: { type: ReportContactSchema, default: () => ({}) },
       subAdmin: { type: ReportContactSchema, default: () => ({}) },
       super: { type: ReportContactSchema, default: () => ({}) },
     },

@@ -22,6 +22,7 @@ export function ReportModal({ agent, isOpen, onClose }: ReportModalProps) {
 
   // Extract inherited contact numbers from reportTo object or fallback
   const adminContact = agent.reportTo?.admin?.phone || agent.adminContact;
+  const superAdminContact = agent.reportTo?.superAdmin?.phone || agent.superAdminContact;
   const subAdminContact = agent.reportTo?.subAdmin?.phone || agent.subAdminContact;
   const superContact = agent.reportTo?.super?.phone || agent.superContact;
 
@@ -29,11 +30,18 @@ export function ReportModal({ agent, isOpen, onClose }: ReportModalProps) {
   const showSuperButton = agentType === "master" && Boolean(superContact);
   const showSubAdminButton =
     (agentType === "master" || agentType === "super") && Boolean(subAdminContact);
-  const showAdminButton =
+  const showSuperAdminButton =
     (agentType === "master" || agentType === "super" || agentType === "sub_admin") &&
+    Boolean(superAdminContact);
+  const showAdminButton =
+    (agentType === "master" ||
+      agentType === "super" ||
+      agentType === "sub_admin" ||
+      agentType === "super_admin") &&
     Boolean(adminContact);
 
-  const hasAnyReportButtons = showAdminButton || showSubAdminButton || showSuperButton;
+  const hasAnyReportButtons =
+    showAdminButton || showSuperAdminButton || showSubAdminButton || showSuperButton;
 
   return (
     <div className="fixed inset-0 z-[999999999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
@@ -100,20 +108,37 @@ export function ReportModal({ agent, isOpen, onClose }: ReportModalProps) {
           </p>
 
           {hasAnyReportButtons ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2">
               {/* Admin Button */}
               {showAdminButton && (
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-[11px] font-hind font-semibold text-gray">
+                  <span className="text-[10px] sm:text-[11px] font-hind font-semibold text-gray">
                     Admin:
                   </span>
                   <a
                     href={formatWhatsAppUrl(adminContact, reportMessage)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full text-center text-white rounded bg-error text-xs px-2 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
+                    className="w-full text-center text-white rounded bg-error text-[11px] sm:text-xs px-1.5 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
                   >
                     Report To Admin
+                  </a>
+                </div>
+              )}
+
+              {/* Super Admin Button */}
+              {showSuperAdminButton && (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] sm:text-[11px] font-hind font-semibold text-gray truncate max-w-full">
+                    Super Admin:
+                  </span>
+                  <a
+                    href={formatWhatsAppUrl(superAdminContact, reportMessage)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full text-center text-white rounded bg-error text-[11px] sm:text-xs px-1.5 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
+                  >
+                    Report To Super Admin
                   </a>
                 </div>
               )}
@@ -121,14 +146,14 @@ export function ReportModal({ agent, isOpen, onClose }: ReportModalProps) {
               {/* Sub Admin Button */}
               {showSubAdminButton && (
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-[11px] font-hind font-semibold text-gray">
+                  <span className="text-[10px] sm:text-[11px] font-hind font-semibold text-gray truncate max-w-full">
                     Sub Admin:
                   </span>
                   <a
                     href={formatWhatsAppUrl(subAdminContact, reportMessage)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full text-center text-white rounded bg-error text-xs px-2 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
+                    className="w-full text-center text-white rounded bg-error text-[11px] sm:text-xs px-1.5 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
                   >
                     Report To Sub Admin
                   </a>
@@ -138,14 +163,14 @@ export function ReportModal({ agent, isOpen, onClose }: ReportModalProps) {
               {/* Super Button */}
               {showSuperButton && (
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-[11px] font-hind font-semibold text-gray">
+                  <span className="text-[10px] sm:text-[11px] font-hind font-semibold text-gray">
                     Super:
                   </span>
                   <a
                     href={formatWhatsAppUrl(superContact, reportMessage)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full text-center text-white rounded bg-error text-xs px-2 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
+                    className="w-full text-center text-white rounded bg-error text-[11px] sm:text-xs px-1.5 py-2 font-hind hover:opacity-90 transition-opacity font-medium shadow"
                   >
                     Report To Super
                   </a>

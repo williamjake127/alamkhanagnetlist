@@ -2,7 +2,7 @@ export interface StoredAgent {
   _id: string;
   name: string;
   agentId: string;
-  type: "admin" | "sub_admin" | "super" | "master";
+  type: "admin" | "super_admin" | "sub_admin" | "super" | "master";
   phone: string;
   whatsapp: string;
   rating: number;
@@ -10,6 +10,7 @@ export interface StoredAgent {
   parentId?: string | null;
   reportTo?: {
     admin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
+    superAdmin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
     subAdmin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
     super?: { id?: string; name?: string; phone?: string; whatsapp?: string };
   };

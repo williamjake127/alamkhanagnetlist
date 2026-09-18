@@ -1,4 +1,4 @@
-export type AgentCategory = 'admin' | 'sub_admin' | 'super' | 'master' | 'service';
+export type AgentCategory = 'admin' | 'super_admin' | 'sub_admin' | 'super' | 'master' | 'service';
 
 export interface Agent {
   id: string;
@@ -12,6 +12,7 @@ export interface Agent {
   whatsapp: string;
   rating: number;
   adminContact?: string;
+  superAdminContact?: string;
   subAdminContact?: string;
   superContact?: string;
   status?: "active" | "inactive";
@@ -20,6 +21,7 @@ export interface Agent {
   image?: string;
   reportTo?: {
     admin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
+    superAdmin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
     subAdmin?: { id?: string; name?: string; phone?: string; whatsapp?: string };
     super?: { id?: string; name?: string; phone?: string; whatsapp?: string };
   };

@@ -21,7 +21,7 @@ const hindSiliguri = Hind_Siliguri({
 export const metadata: Metadata = {
   title: "Official Agent Directory - ভেরিফাইড এজেন্ট তালিকা",
   description:
-    "Official Verified Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.",
+    "Official Verified Agent Directory. Find verified Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.",
 };
 
 export default function RootLayout({

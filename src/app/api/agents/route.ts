@@ -181,14 +181,23 @@ export async function POST(req: NextRequest) {
             phone: parent.phone,
             whatsapp: parent.whatsapp,
           };
-          if (type === "sub_admin") {
+          if (type === "super_admin") {
             reportTo.admin = parentContact;
+          } else if (type === "sub_admin") {
+            if (parent.type === "super_admin") {
+              reportTo.superAdmin = parentContact;
+              if (parent.reportTo?.admin) reportTo.admin = parent.reportTo.admin;
+            } else {
+              reportTo.admin = parentContact;
+            }
           } else if (type === "super") {
             reportTo.subAdmin = parentContact;
+            if (parent.reportTo?.superAdmin) reportTo.superAdmin = parent.reportTo.superAdmin;
             if (parent.reportTo?.admin) reportTo.admin = parent.reportTo.admin;
           } else if (type === "master") {
             reportTo.super = parentContact;
             if (parent.reportTo?.subAdmin) reportTo.subAdmin = parent.reportTo.subAdmin;
+            if (parent.reportTo?.superAdmin) reportTo.superAdmin = parent.reportTo.superAdmin;
             if (parent.reportTo?.admin) reportTo.admin = parent.reportTo.admin;
           }
         }

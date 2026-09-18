@@ -114,6 +114,7 @@ export function SearchModal({
             >
               <option value="default">All</option>
               <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
               <option value="sub_admin">Sub Admin</option>
               <option value="super">Super</option>
               <option value="master">Master</option>

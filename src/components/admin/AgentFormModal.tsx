@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Check, Star, Users, Zap, Shield, UserCheck } from "lucide-react";
+import { X, Check, Star, Users, Zap, Shield, UserCheck, Crown } from "lucide-react";
 import { useSiteData } from "@/lib/site-context";
 
 interface AgentFormModalProps {
@@ -22,7 +22,7 @@ export function AgentFormModal({
   const [formData, setFormData] = useState({
     name: "",
     agentId: "",
-    type: "master" as "admin" | "sub_admin" | "super" | "master",
+    type: "master" as "admin" | "super_admin" | "sub_admin" | "super" | "master",
     phone: "",
     whatsapp: "",
     rating: 5,
@@ -66,13 +66,32 @@ export function AgentFormModal({
 
   // Supervisors list from cached agents
   const parentsList = React.useMemo(() => {
-    let targetType = "";
-    if (formData.type === "master") targetType = "super";
-    else if (formData.type === "super") targetType = "sub_admin";
-    else if (formData.type === "sub_admin") targetType = "admin";
-
-    if (!targetType) return [];
-    return agents.filter((a: any) => (a.type === targetType || a.category === targetType) && a.status === "active");
+    if (formData.type === "master") {
+      return agents.filter(
+        (a: any) => (a.type === "super" || a.category === "super") && a.status === "active"
+      );
+    }
+    if (formData.type === "super") {
+      return agents.filter(
+        (a: any) => (a.type === "sub_admin" || a.category === "sub_admin") && a.status === "active"
+      );
+    }
+    if (formData.type === "sub_admin") {
+      return agents.filter(
+        (a: any) =>
+          (a.type === "super_admin" ||
+            a.category === "super_admin" ||
+            a.type === "admin" ||
+            a.category === "admin") &&
+          a.status === "active"
+      );
+    }
+    if (formData.type === "super_admin") {
+      return agents.filter(
+        (a: any) => (a.type === "admin" || a.category === "admin") && a.status === "active"
+      );
+    }
+    return [];
   }, [formData.type, agents]);
 
   // Auto-generate WhatsApp when phone changes if WhatsApp isn't manually customized
@@ -145,6 +164,13 @@ export function AgentFormModal({
       activeBg: "bg-cyan-400 text-black font-bold",
     },
     {
+      id: "super_admin",
+      title: "Super Admin",
+      icon: Crown,
+      color: "text-blue-400 border-blue-500/40 bg-blue-500/10",
+      activeBg: "bg-blue-500 text-black font-bold",
+    },
+    {
       id: "admin",
       title: "Admin",
       icon: UserCheck,
@@ -191,7 +217,7 @@ export function AgentFormModal({
             <label className="block text-gray text-xs font-semibold mb-2 uppercase tracking-wider">
               1. Select Agent Category
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {roles.map((r) => {
                 const Icon = r.icon;
                 const isSelected = formData.type === r.id;

@@ -12,6 +12,7 @@ import {
   Zap,
   Shield,
   UserCheck,
+  Crown,
   LayoutGrid,
   List,
   Star,
@@ -73,6 +74,7 @@ export default function ManageAgentsPage() {
     { label: "Masters", value: "master", icon: Users },
     { label: "Supers", value: "super", icon: Zap },
     { label: "Sub Admins", value: "sub_admin", icon: Shield },
+    { label: "Super Admins", value: "super_admin", icon: Crown },
     { label: "Admins", value: "admin", icon: UserCheck },
   ];
 
@@ -229,6 +231,8 @@ export default function ManageAgentsPage() {
                           ? "bg-amber-500/20 text-amber-400"
                           : agent.type === "sub_admin" || agent.category === "sub_admin"
                           ? "bg-cyan-500/20 text-cyan-400"
+                          : agent.type === "super_admin" || agent.category === "super_admin"
+                          ? "bg-blue-500/20 text-blue-400"
                           : "bg-purple-500/20 text-purple-400"
                       }`}
                     >
@@ -355,6 +359,8 @@ export default function ManageAgentsPage() {
                             ? "bg-amber-500/20 text-amber-400"
                             : agent.type === "sub_admin" || agent.category === "sub_admin"
                             ? "bg-cyan-500/20 text-cyan-400"
+                            : agent.type === "super_admin" || agent.category === "super_admin"
+                            ? "bg-blue-500/20 text-blue-400"
                             : "bg-purple-500/20 text-purple-400"
                         }`}
                       >

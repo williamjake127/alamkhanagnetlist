@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Shield,
   UserCheck,
+  Crown,
   Zap,
   Users,
   Plus,
@@ -46,6 +47,7 @@ export default function AdminDashboardPage() {
 
   const stats = {
     admin: agents.filter((a: any) => a.type === "admin" || a.category === "admin").length,
+    super_admin: agents.filter((a: any) => a.type === "super_admin" || a.category === "super_admin").length,
     sub_admin: agents.filter((a: any) => a.type === "sub_admin" || a.category === "sub_admin").length,
     super: agents.filter((a: any) => a.type === "super" || a.category === "super").length,
     master: agents.filter((a: any) => a.type === "master" || a.category === "master").length,
@@ -53,7 +55,8 @@ export default function AdminDashboardPage() {
   };
 
   const recentAgents = agents.slice(0, 8);
-  const totalAgents = stats.admin + stats.sub_admin + stats.super + stats.master;
+  const totalAgents =
+    stats.admin + stats.super_admin + stats.sub_admin + stats.super + stats.master;
 
   return (
     <div className="space-y-6 font-sans">
@@ -98,7 +101,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 2. Summary Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Master Agents */}
         <div className="bg-[#12161d] border border-emerald-500/20 hover:border-emerald-500/40 rounded-2xl p-4 transition-all shadow-md">
           <div className="flex items-center justify-between">
@@ -115,7 +118,7 @@ export default function AdminDashboardPage() {
             </span>
             <span className="text-[11px] text-emerald-400 font-medium">Active</span>
           </div>
-          <p className="text-[11px] text-gray/70 mt-1">Tier 4 • Client Dealing</p>
+          <p className="text-[11px] text-gray/70 mt-1">Tier 5 • Client Dealing</p>
         </div>
 
         {/* Super Agents */}
@@ -134,7 +137,7 @@ export default function AdminDashboardPage() {
             </span>
             <span className="text-[11px] text-amber-400 font-medium">Supervisors</span>
           </div>
-          <p className="text-[11px] text-gray/70 mt-1">Tier 3 • Super Agents</p>
+          <p className="text-[11px] text-gray/70 mt-1">Tier 4 • Super Agents</p>
         </div>
 
         {/* Sub Admins */}
@@ -153,7 +156,26 @@ export default function AdminDashboardPage() {
             </span>
             <span className="text-[11px] text-cyan-400 font-medium">Managers</span>
           </div>
-          <p className="text-[11px] text-gray/70 mt-1">Tier 2 • Sub Admins</p>
+          <p className="text-[11px] text-gray/70 mt-1">Tier 3 • Sub Admins</p>
+        </div>
+
+        {/* Super Admins */}
+        <div className="bg-[#12161d] border border-blue-500/20 hover:border-blue-500/40 rounded-2xl p-4 transition-all shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray uppercase tracking-wider font-semibold">
+              Super Admins
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <Crown className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold text-white">
+              {stats.super_admin}
+            </span>
+            <span className="text-[11px] text-blue-400 font-medium">Directors</span>
+          </div>
+          <p className="text-[11px] text-gray/70 mt-1">Tier 2 • Super Admins</p>
         </div>
 
         {/* Admins */}

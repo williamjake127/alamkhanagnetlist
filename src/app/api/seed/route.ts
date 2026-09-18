@@ -24,7 +24,7 @@ export async function POST() {
     let seededAgents = 0;
 
     if (agentCount === 0) {
-      // Create a default Top Admin & Sub Admin & Super first so we have a realistic hierarchy sample
+      // Create default hierarchy: Top Admin -> Super Admin -> Sub Admin -> Super Agent -> Master Agents
       const topAdmin = await Agent.create({
         name: "MASTER ADMIN 01",
         agentId: "ADMIN-01",
@@ -35,6 +35,25 @@ export async function POST() {
         status: "active",
       });
 
+      const superAdmin = await Agent.create({
+        name: "SUPER ADMIN PRIME",
+        agentId: "S-ADMIN-01",
+        type: "super_admin",
+        phone: "+96878531375",
+        whatsapp: "https://wa.me/+96878531375",
+        rating: 5,
+        parentId: topAdmin._id,
+        reportTo: {
+          admin: {
+            id: topAdmin.agentId,
+            name: topAdmin.name,
+            phone: topAdmin.phone,
+            whatsapp: topAdmin.whatsapp,
+          },
+        },
+        status: "active",
+      });
+
       const subAdmin = await Agent.create({
         name: "SUB ADMIN DHAKA",
         agentId: "SUB-01",
@@ -42,8 +61,14 @@ export async function POST() {
         phone: "+96878486803",
         whatsapp: "https://wa.me/+96878486803",
         rating: 5,
-        parentId: topAdmin._id,
+        parentId: superAdmin._id,
         reportTo: {
+          superAdmin: {
+            id: superAdmin.agentId,
+            name: superAdmin.name,
+            phone: superAdmin.phone,
+            whatsapp: superAdmin.whatsapp,
+          },
           admin: {
             id: topAdmin.agentId,
             name: topAdmin.name,
@@ -69,6 +94,12 @@ export async function POST() {
             phone: subAdmin.phone,
             whatsapp: subAdmin.whatsapp,
           },
+          superAdmin: {
+            id: superAdmin.agentId,
+            name: superAdmin.name,
+            phone: superAdmin.phone,
+            whatsapp: superAdmin.whatsapp,
+          },
           admin: {
             id: topAdmin.agentId,
             name: topAdmin.name,
@@ -79,7 +110,7 @@ export async function POST() {
         status: "active",
       });
 
-      // Now create the 25 verified Master Agents under this Super Agent
+      // Now create the verified Master Agents under this Super Agent
       const masterDocs = INITIAL_AGENTS.map((a) => ({
         name: a.name,
         agentId: a.id,
@@ -101,6 +132,12 @@ export async function POST() {
             phone: subAdmin.phone,
             whatsapp: subAdmin.whatsapp,
           },
+          superAdmin: {
+            id: superAdmin.agentId,
+            name: superAdmin.name,
+            phone: superAdmin.phone,
+            whatsapp: superAdmin.whatsapp,
+          },
           admin: {
             id: topAdmin.agentId,
             name: topAdmin.name,
@@ -112,7 +149,7 @@ export async function POST() {
       }));
 
       await Agent.insertMany(masterDocs);
-      seededAgents = masterDocs.length + 3;
+      seededAgents = masterDocs.length + 4;
     }
 
     return NextResponse.json({

@@ -15,6 +15,7 @@ export function Navbar({ onOpenSearch }: NavbarProps) {
   const navItems = [
     { label: "Home", href: "/", icon: "home" },
     { label: "Admin", href: "/admin", icon: "agent" },
+    { label: "Super Admin", href: "/super_admin", icon: "agent" },
     { label: "Sub Admin", href: "/sub_admin", icon: "agent" },
     { label: "Super", href: "/super", icon: "agent" },
     { label: "Master", href: "/master", icon: "agent" },

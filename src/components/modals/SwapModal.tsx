@@ -20,6 +20,7 @@ export function SwapModal({ isOpen, onClose }: SwapModalProps) {
     if (val === "master_agent") router.push("/master");
     else if (val === "super_agent") router.push("/super");
     else if (val === "sub_admin") router.push("/sub_admin");
+    else if (val === "super_admin") router.push("/super_admin");
     else if (val === "admin") router.push("/admin");
     else router.push("/");
   };
@@ -51,6 +52,7 @@ export function SwapModal({ isOpen, onClose }: SwapModalProps) {
             <option value="master_agent">Master</option>
             <option value="super_agent">Super</option>
             <option value="sub_admin">Sub Admin</option>
+            <option value="super_admin">Super Admin</option>
             <option value="admin">Admin</option>
           </select>
         </div>

@@ -202,14 +202,14 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
     const desc = settings.metaDescription
       ? settings.metaDescription
       : brand
-      ? `Official ${brand} Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.`
-      : "Official Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.";
+      ? `Official ${brand} Agent Directory. Find verified Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.`
+      : "Official Agent Directory. Find verified Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.";
 
     const keywords = settings.metaKeywords
       ? settings.metaKeywords
       : brand
-      ? `${brand}, ${brand} agent list, ${brand} admin, ${brand} master agent, ${brand} super agent, ${brand} sub admin, verified agents, whatsapp contact, 24/7 customer support`
-      : "agent list, official agent directory, admin list, master agent, super agent, sub admin, verified agents, whatsapp contact, 24/7 customer support";
+      ? `${brand}, ${brand} agent list, ${brand} admin, ${brand} super admin, ${brand} master agent, ${brand} super agent, ${brand} sub admin, verified agents, whatsapp contact, 24/7 customer support`
+      : "agent list, official agent directory, admin list, super admin, master agent, super agent, sub admin, verified agents, whatsapp contact, 24/7 customer support";
 
     document.title = title;
 

@@ -173,10 +173,10 @@ export default function WebsiteSettingsAdminPage() {
     if (!brand) {
       setMetaTitle("Official Agent Directory - ভেরিফাইড এজেন্ট তালিকা");
       setMetaDescription(
-        "Official Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp."
+        "Official Agent Directory. Find verified Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp."
       );
       setMetaKeywords(
-        "agent list, official agent directory, admin list, master agent, super agent, sub admin, verified agents, whatsapp contact, 24/7 customer support"
+        "agent list, official agent directory, admin list, super admin, master agent, super agent, sub admin, verified agents, whatsapp contact, 24/7 customer support"
       );
       setSuccessMessage("Generated general SEO metadata.");
       return;
@@ -184,10 +184,10 @@ export default function WebsiteSettingsAdminPage() {
 
     setMetaTitle(`${brand} Agent List - Official Agent Directory`);
     setMetaDescription(
-      `Official ${brand} Agent Directory. Find verified ${brand} Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.`
+      `Official ${brand} Agent Directory. Find verified ${brand} Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.`
     );
     setMetaKeywords(
-      `${brand}, ${brand} agent list, ${brand} admin, ${brand} master agent, ${brand} super agent, ${brand} sub admin, ${brand} agent contact, ${brand} whatsapp, verified agents, 24/7 support`
+      `${brand}, ${brand} agent list, ${brand} admin, ${brand} super admin, ${brand} master agent, ${brand} super agent, ${brand} sub admin, ${brand} agent contact, ${brand} whatsapp, verified agents, 24/7 support`
     );
     setSuccessMessage(`Automated SEO metadata generated for "${brand}"!`);
   };
@@ -585,8 +585,8 @@ export default function WebsiteSettingsAdminPage() {
                 onChange={(e) => setMetaDescription(e.target.value)}
                 placeholder={
                   siteName
-                    ? `Official ${siteName} Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.`
-                    : "Official Agent Directory. Find verified Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp."
+                    ? `Official ${siteName} Agent Directory. Find verified Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp.`
+                    : "Official Agent Directory. Find verified Admin, Super Admin, Sub Admin, Super Agent, and Master Agent contacts safely via WhatsApp."
                 }
                 className="w-full px-3 py-2 rounded-xl bg-[#090d12] border border-white/10 text-white outline-none focus:border-primary transition-colors text-xs sm:text-sm font-sans"
               />
